@@ -1,0 +1,2 @@
+Encoder: RDKitDescriptors
+Predictor: MLP_Predictor

@@ -1,0 +1,12 @@
+chemeleon_mp.pt
+*.pdf
+/plots/
+/checkpoints/
+/logs/
+/test_predictions/
+**/__pycache__/
+*.log
+*.db
+/data/goodscents/goodscents.csv
+/data/df_odor_strength.csv
+/data/odor_strength_groups.csv

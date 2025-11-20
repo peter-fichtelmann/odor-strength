@@ -1,0 +1,31 @@
+{
+    "standardizer_name": "yeo-johnson",
+    "n_layers": 8,
+    "dim": 180,
+    "batch_size": 16,
+    "n_epochs": 54,
+    "objective_name": "mse",
+    "learning_rate": 0.0003542653415604152,
+    "optimizer_name": "adam",
+    "training_scheduler_name": "CosineAnnealingLR",
+    "warmup_epochs": 10,
+    "activation": "leaky-relu",
+    "dropout": 0.30000000000000004,
+    "early_stopping_params": {
+        "early_stopping_rounds": 50,
+        "delta": 0
+    },
+    "weight_average": false,
+    "metric_name": "mse_macro",
+    "verbose_eval": false,
+    "optimizer_params": {
+        "weight_decay": 0.0004469862550948625,
+        "betas": [
+            0.95,
+            0.996
+        ]
+    },
+    "binarize_labels": false,
+    "input_dim": 217,
+    "output_dim": 1
+}
