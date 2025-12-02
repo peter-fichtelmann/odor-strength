@@ -26,6 +26,8 @@ Clone this repository to your local machine:
 
 ```bash
 git clone https://github.com/peter-fichtelmann/odor-strength.git
+```
+```bash
 cd odor-strength
 ```
 
@@ -34,6 +36,8 @@ cd odor-strength
 Create Python environment with Python 3.12.2 (e.g. via conda)
 ```bash
 conda create -n odor-strength python=3.12.2
+```
+```bash
 conda activate odor-strength
 ```
 
