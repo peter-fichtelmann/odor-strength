@@ -269,7 +269,6 @@ class GaussianProcessClassifierPredictor(PredictorBase):
         import joblib
         self.model = joblib.load(path)
 
-
       
 class RandomForestClassifierPredictor(PredictorBase):
     """Predictor that uses Random Forest Classifier from sklearn with multioutputclassifier for classification tasks.
