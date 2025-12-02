@@ -26,13 +26,15 @@ Clone this repository to your local machine:
 
 ```bash
 git clone https://github.com/peter-fichtelmann/odor-strength.git
+cd odor-strength
 ```
 
 ### 2. Set up environment
 
-Install Python 3.12.2 (e.g. via conda)
+Create Python environment with Python 3.12.2 (e.g. via conda)
 ```bash
-conda install python=3.12.2
+conda create -n odor-strength python=3.12.2
+conda activate odor-strength
 ```
 
 Install dependencies
