@@ -14,17 +14,10 @@
 # In[1]:
 
 
-# get_ipython().run_line_magic('load_ext', 'autoreload')
-# get_ipython().run_line_magic('autoreload', '2')
-
-
-# In[2]:
-
-
 # tested with python==3.12.2
 
 
-# In[3]:
+# In[2]:
 
 
 import pandas as pd
@@ -34,7 +27,7 @@ import pandas as pd
 
 # Run the notebook dataset_curation.ipynb or python script dataset_curation.py first
 
-# In[29]:
+# In[32]:
 
 
 df_odor_strength = pd.read_csv('data/df_odor_strength.csv')
@@ -47,7 +40,7 @@ groups = pd.read_csv('data/odor_strength_groups.csv', index_col=0).values.flatte
 
 # ## Model Training with Hyperparameter optimization
 
-# In[5]:
+# In[4]:
 
 
 from typing import Callable, Any
@@ -58,6 +51,7 @@ import optuna
 from optuna.study import MaxTrialsCallback
 from optuna.trial import TrialState
 import os
+
 
 from models.odor_strength_module import OdorStrengthModule, OdorStrengthModuleHyperparameterOptimizationWrapper
 from models.predictors import Average, LogisticRegressionPredictor, RandomForestPredictor, XGBoostPredictor, MLP_Predictor, ChemPropMPNNPredictor, ChemeleonPredictor, CoralPredictor
@@ -75,7 +69,7 @@ if not os.path.exists('hyperparameter_optimization/hp_opt_dbs/'):
     os.makedirs('hyperparameter_optimization/hp_opt_dbs/')
 
 
-# In[6]:
+# In[5]:
 
 
 X = df_odor_strength['canonical_smiles'].values
@@ -86,7 +80,7 @@ X_train = X_train.tolist()
 
 # ### Example Model Cross Validation
 
-# In[13]:
+# In[ ]:
 
 
 odor_strength_module = OdorStrengthModule(
@@ -99,13 +93,13 @@ odor_strength_module.evaluate_kFold(X_train, y_train, groups=groups_train, n_spl
 
 # ### Hyperparameter Optimization
 
-# In[8]:
+# In[6]:
 
 
 N_REPEATS = 1
 N_FOLDS = 2
 N_TRIALS = 1
-LIMIT = 100
+LIMIT = 1
 
 callback = MaxTrialsCallback(
     n_trials=LIMIT,
@@ -456,7 +450,7 @@ print('Hyperparameter optimization completed for all combinations of encoders an
 
 # ## Best-Performing Model Training and Evaluation
 
-# In[43]:
+# In[7]:
 
 
 from typing import Tuple
@@ -514,7 +508,7 @@ X_test = X_test.tolist()
 # 
 # This section contains functions for evaluating the best-performing models from hyperparameter optimization and generating performance visualizations.
 
-# In[50]:
+# In[8]:
 
 
 def predict_on_test_set(
@@ -738,7 +732,7 @@ df_indirect_2, best_model_indirect_second_step_class, best_hyperparameters_indir
 # 1. First model predicts if a molecule has any odor (binary classification)
 # 2. Second model predicts odor strength for molecules classified as odorous (regression)
 
-# In[ ]:
+# In[9]:
 
 
 repeats = 10
@@ -761,7 +755,7 @@ for encoder in encoders:
 df_odor_strength_indirect = pd.DataFrame(mse_macros)
 
 
-# In[ ]:
+# In[10]:
 
 
 df_odor_strength_indirect
@@ -770,7 +764,7 @@ df_odor_strength_indirect
 # ### Heatmap Visualization
 # 
 
-# In[ ]:
+# In[11]:
 
 
 from typing import Tuple
@@ -832,53 +826,66 @@ def plot_heatmap(
 
 
 plot_heatmap(
-    df_direct.dropna(how='all').iloc[:4, 1:],
+    df_indirect_1.dropna(how='all').iloc[:4, 1:],
     colorbar_label='F1 Score',
     figsize=(FIGURE_WIDTH*1.2, 2*1.2),
     dpi=DPI,
     fontsize=FONTSIZE,
     labelsize=LABELSIZE,
     labelpad=LABELPAD,
-    save_path=['figures/hp_opt_heatmap_has_odor.pdf', 'figures/hp_opt_heatmap_has_odor.png'],
+    save_path=['figures/hp_opt_heatmap_has_odor.pdf'],
     custom_x_ticks=['RDKit Descriptors', 'Morgan FP', 'RDKit FP', 'Topological Torsion FP', 'Atom Pair FP', 'MACCCS Keys FP', 'ChemBERTa'],
     custom_y_ticks=['Logistic Regression', 'Random Forest', 'XGBoost', 'MLP']
     )
 plot_heatmap(
-    - df_indirect_1.dropna(how='all').iloc[:5, 1:],
+    - df_indirect_2.dropna(how='all').iloc[:5, 1:],
     colorbar_label='Negative Macro MSE',
     figsize=(FIGURE_WIDTH*1.2, 2.2*1.2),
     dpi=DPI,
     fontsize=FONTSIZE,
     labelsize=LABELSIZE,
     labelpad=LABELPAD,
-    save_path=['figures/hp_opt_heatmap_wo_odorless.pdf', 'figures/hp_opt_heatmap_wo_odorless.png'],
+    save_path=['figures/hp_opt_heatmap_wo_odorless.pdf'],
     custom_x_ticks=['RDKit Descriptors', 'Morgan FP', 'RDKit FP', 'Topological Torsion FP', 'Atom Pair FP', 'MACCCS Keys FP', 'ChemBERTa'],
     custom_y_ticks=['Logistic Regression', 'Random Forest', 'XGBoost', 'MLP', 'CORAL']
     )
 plot_heatmap(
-    - df_odor_strength_indirect.iloc[2:, 1:],
+    - df_odor_strength_indirect.dropna(how='all').iloc[2:, 1:],
     colorbar_label='Negative Macro MSE',
     figsize=(FIGURE_WIDTH*1.2, 2.2*1.2),
     dpi=DPI,
     fontsize=FONTSIZE,
     labelsize=LABELSIZE,
     labelpad=LABELPAD,
-    save_path=['figures/hp_opt_heatmap_indirect.pdf', 'figures/hp_opt_heatmap_indirect.png'],
+    save_path=['figures/hp_opt_heatmap_indirect.pdf'],
     custom_x_ticks=['RDKit Descriptors', 'Morgan FP', 'RDKit FP', 'Topological Torsion FP', 'Atom Pair FP', 'MACCCS Keys FP', 'ChemBERTa'],
     custom_y_ticks=['Logistic Regression', 'Random Forest', 'XGBoost', 'MLP']
     )
 # 
 plot_heatmap(
-    - df_odor_strength_indirect.dropna(how='all').iloc[:5, 1:],
+    - df_direct.dropna(how='all').iloc[:5, 1:],
     colorbar_label=' Negative Macro MSE',
     figsize=(FIGURE_WIDTH*width_factor, 2.2*width_factor),
     dpi=DPI,
     fontsize=FONTSIZE,
     labelsize=LABELSIZE,
     labelpad=LABELPAD,
-    save_path=['figures/hp_opt_heatmap_w_odorless.pdf', 'figures/hp_opt_heatmap_w_odorless.png'],
+    save_path=['figures/hp_opt_heatmap_w_odorless.pdf'],
     custom_x_ticks=['RDKit Descriptors', 'Morgan FP', 'RDKit FP', 'Topological Torsion FP', 'Atom Pair FP', 'MACCCS Keys FP', 'ChemBERTa'],
     custom_y_ticks=['Logistic Regression', 'Random Forest', 'XGBoost', 'MLP', 'CORAL']
+)
+# difference heatmap
+plot_heatmap(
+    df_odor_strength_indirect.iloc[2:, 1:] - df_direct.dropna(how='all').iloc[:4, 1:],
+    colorbar_label='Difference Macro MSE',
+    figsize=(FIGURE_WIDTH*1.2, 2*1.2),
+    dpi=DPI,
+    fontsize=FONTSIZE,
+    labelsize=LABELSIZE,
+    labelpad=LABELPAD,
+    save_path=['figures/hp_opt_heatmap_difference.pdf', 'figures/hp_opt_heatmap_difference.png'],
+    custom_x_ticks=['RDKit Descriptors', 'Morgan FP', 'RDKit FP', 'Topological Torsion FP', 'Atom Pair FP', 'MACCCS Keys FP', 'ChemBERTa'],
+    custom_y_ticks=['Logistic Regression', 'Random Forest', 'XGBoost', 'MLP']
 )
 
 
@@ -886,13 +893,12 @@ plot_heatmap(
 # 
 # This section compares the best-performing models from both approaches on the test set to determine which strategy works better for odor strength prediction.
 
-# In[ ]:
+# In[34]:
 
 
 repeats = 10
 preds_list = []
 preds_two_step_list = []
-
 X = df_odor_strength['canonical_smiles'].values
 y = df_odor_strength['has_odor'].values
 stratify_data = df_odor_strength['numerical_strength'].values
@@ -916,14 +922,15 @@ for i in range(repeats):
 
     indirect_first_step_model = best_model_indirect_first_step_class(**best_hyperparameters_indirect_first_step)
     indirect_second_step_model = best_model_indirect_second_step_class(**best_hyperparameters_indirect_second_step)
+    
 
     y_train_has_odor = y_train.copy()
     y_train_has_odor[y_train_has_odor>0] = 1
     indirect_first_step_model.fit(X_train, y_train_has_odor)
 
     y_train_wo_odorless = y_train.copy()
-    X_train_wo_odorless = np.array(X_train)[y_train_wo_odorless > 1].tolist()
-    y_train_wo_odorless = y_train_wo_odorless[y_train_wo_odorless > 1]
+    X_train_wo_odorless = np.array(X_train)[y_train_wo_odorless >= 1].tolist()
+    y_train_wo_odorless = y_train_wo_odorless[y_train_wo_odorless >= 1]
     indirect_second_step_model.fit(X_train_wo_odorless, y_train_wo_odorless)
 
     preds_two_step = indirect_first_step_model.predict(X_test)
@@ -935,7 +942,7 @@ preds_two_step = np.hstack(preds_two_step_list)
 y_test = np.hstack([y_test]*repeats)
 
 
-# In[ ]:
+# In[35]:
 
 
 from matplotlib.colors import LinearSegmentedColormap
@@ -946,6 +953,7 @@ from utility.colors import okabe_ito
 def plot_confusion_matrix(
     y_true: np.ndarray,
     y_pred: np.ndarray,
+    y_pred_2: np.ndarray|None = None, # for difference plotting
     figsize: tuple = (10, 10),
     dpi: int = 100,
     tick_labels: dict = {0: "Odorless", 1: "Low", 2: "Medium", 3: "High"},
@@ -954,7 +962,8 @@ def plot_confusion_matrix(
     fontsize: int = 20,
     labelsize: int = 18,
     labelpad: int = 10,
-    save_path: str | None = None
+    save_path: str | None = None,
+    center_value: float | None = None,
     ) -> None:
     """
     Plots a normalized (by true values) confusion matrix for classification results.
@@ -987,8 +996,25 @@ def plot_confusion_matrix(
     confusion = confusion_matrix(y_true, y_pred)
     confusion = confusion.T
     normed_confusion_matrix = confusion / np.sum(confusion, axis=0)
+    if y_pred_2 is not None:
+        y_pred_2 = y_pred_2.round().astype(int)
+        y_pred_2[y_pred_2 > max_tick_value], y_pred_2[y_pred_2 < min_tick_value] = max_tick_value, min_tick_value
+        confusion_2 = confusion_matrix(y_true, y_pred_2)
+        confusion_2 = confusion_2.T
+        normed_confusion_matrix_2 = confusion_2 / np.sum(confusion_2, axis=0)
+        normed_confusion_matrix = normed_confusion_matrix_2 - normed_confusion_matrix
     fig, ax = plt.subplots(figsize=figsize)
-    im = ax.imshow(normed_confusion_matrix, cmap=cmap, aspect='equal', origin='lower')
+    # Calculate vmin and vmax for centering colorbar
+    if center_value is not None:
+        data_min = normed_confusion_matrix.min()
+        data_max = normed_confusion_matrix.max()
+        max_abs_diff = max(abs(data_max - center_value), abs(data_min - center_value))
+        vmin = center_value - max_abs_diff
+        vmax = center_value + max_abs_diff
+    else:
+        vmin = None
+        vmax = None
+    im = ax.imshow(normed_confusion_matrix, cmap=cmap, aspect='equal', origin='lower', vmin=vmin, vmax=vmax)
     if text_annotation:
         for i in range(normed_confusion_matrix.shape[0]):
             for j in range(normed_confusion_matrix.shape[1]):
@@ -1010,7 +1036,7 @@ def plot_confusion_matrix(
         plt.savefig(save_path, dpi=dpi, bbox_inches='tight')
     plt.show()
 
-colors = [okabe_ito[4], okabe_ito[5]]
+colors = [okabe_ito[1], okabe_ito[3]]
 mycmap = LinearSegmentedColormap.from_list("mycmap", colors, N=256)
 
 print(Metrics().calculate_mse_macro(y_test, preds), Metrics().calculate_mse(y_test, preds))
@@ -1052,25 +1078,47 @@ plot_confusion_matrix(
     labelpad=LABELPAD,
 )
 
-
-# In[ ]:
-
-
-from data.data_cleaner import GoodScentsDataCleaner
-import pandas as pd
-
-keller_2016 = pd.read_excel('data/keller_2016/12868_2016_287_MOESM1_ESM.xlsx', header=2)
-keller_2016.rename(columns={'C.A.S.': 'cas'}, inplace=True)
-data_cleaner = GoodScentsDataCleaner(data=keller_2016)
-data_cleaner.clean_molecules()
-keller_2016 = data_cleaner.data
+# difference plot
+colors = [okabe_ito[1], '#808080', okabe_ito[3]]
+mycmap3 = LinearSegmentedColormap.from_list("mycmap", colors, N=256)
+plot_confusion_matrix(
+    y_test,
+    preds,
+    y_pred_2=preds_two_step,
+    cmap=mycmap3,
+    figsize=(FIGURE_WIDTH, 3),
+    dpi=DPI,
+    text_annotation=False,
+    fontsize=FONTSIZE,
+    labelsize=LABELSIZE,
+    labelpad=LABELPAD,
+    center_value=0.0
+)
 
 
 # ## External Validation on Keller 2016 Dataset
 # 
 # This section validates the best-performing model on an independent dataset from Keller et al. (2016) to assess generalization performance.
 
-# In[ ]:
+# In[36]:
+
+
+from data.data_cleaner import GoodScentsDataCleaner
+import pandas as pd
+
+cleaned_keller_path = 'data/keller_2016/cleaned_keller_2016.csv'
+if os.path.exists(cleaned_keller_path):
+    keller_2016 = pd.read_csv(cleaned_keller_path)
+else:
+    keller_2016 = pd.read_excel('data/keller_2016/12868_2016_287_MOESM1_ESM.xlsx', header=2)
+    keller_2016.rename(columns={'C.A.S.': 'cas'}, inplace=True)
+    data_cleaner = GoodScentsDataCleaner(data=keller_2016)
+    data_cleaner.clean_molecules()
+    keller_2016 = data_cleaner.data
+    keller_2016.to_csv(cleaned_keller_path, index=False)
+
+
+# In[37]:
 
 
 keller_2016 = keller_2016[keller_2016['canonical_smiles'].notna()]
@@ -1078,7 +1126,7 @@ keller_2016['predicted_intensity'] = model.predict(keller_2016['canonical_smiles
 keller_2016['predicted_intensity_rounded'] = keller_2016['predicted_intensity'].round()
 
 
-# In[ ]:
+# In[38]:
 
 
 keller_2016_test  = keller_2016[~keller_2016['canonical_smiles'].isin(df_odor_strength['canonical_smiles'])]
@@ -1111,7 +1159,7 @@ def calculate_morgan_tanimoto_similarity(smiles_list_1: list[str], smiles_list_2
 df_morgan_similarities = calculate_morgan_tanimoto_similarity(df_odor_strength['canonical_smiles'].tolist(), keller_2016_test['canonical_smiles'].unique().tolist())
 
 
-# In[ ]:
+# In[39]:
 
 
 smiles_to_remove = df_morgan_similarities[df_morgan_similarities.max(axis=1) > 0.8].index
@@ -1119,7 +1167,7 @@ keller_2016_test = keller_2016_test[~keller_2016_test['canonical_smiles'].isin(s
 keller_2016_test['canonical_smiles'].nunique()
 
 
-# In[ ]:
+# In[40]:
 
 
 keller_2016_test['Odor dilution'] = keller_2016_test['Odor dilution'].map({  
@@ -1130,22 +1178,7 @@ keller_2016_test['Odor dilution'] = keller_2016_test['Odor dilution'].map({
 }).astype(float)
 
 
-# In[ ]:
-
-
-# calculate standard deviation per dilution averaged over molecules
-print(keller_2016_test.groupby('canonical_smiles')['HOW STRONG IS THE SMELL?'].count().mean())
-
-for dilution in keller_2016_test['Odor dilution'].unique():
-    print(f'Number of molecules: {keller_2016_test[keller_2016_test['Odor dilution'] == dilution]['canonical_smiles'].nunique()}')
-    groups = keller_2016_test[keller_2016_test['Odor dilution'] == dilution].groupby('canonical_smiles')
-    std_dev = groups['HOW STRONG IS THE SMELL?'].std()
-    print(f'Std dev for dilution {dilution} per molecule: mean: {std_dev.mean()}, std: {std_dev.std()}, min: {std_dev.min()}, max: {std_dev.max()}')
-    count = groups['HOW STRONG IS THE SMELL?'].count()
-    print(f'Count for dilution {dilution} per molecule: mean: {count.mean()}, std: {count.std()}, min: {count.min()}, max: {count.max()}')
-
-
-# In[ ]:
+# In[41]:
 
 
 from sklearn.metrics import confusion_matrix
@@ -1362,7 +1395,7 @@ combined_fig = plot_combined_figure_with_violins(
     y_pred=preds,
     df=-df_direct.dropna(how='all').iloc[:5, 1:],
     keller_data=keller_2016_test,
-    colorbar_label_1=' Negativ Macro MSE',
+    colorbar_label_1=' Negative Macro MSE',
     colorbar_label_2='Ratio of Test Categories',
     tick_labels={0: "Odorless", 1: "Low", 2: "Medium", 3: "High"},
     text_annotation=False,
@@ -1383,7 +1416,7 @@ combined_fig = plot_combined_figure_with_violins(
 
 # ## SHAP Feature Importance Analysis
 
-# In[ ]:
+# In[42]:
 
 
 import shap
@@ -1401,7 +1434,7 @@ mycmap = LinearSegmentedColormap.from_list("mycmap", colors, N=256)
 # 
 # Setting up SHAP (SHapley Additive exPlanations) analysis to understand feature importance and model interpretability for the best-performing odor strength prediction model.
 
-# In[ ]:
+# In[43]:
 
 
 encoded_X_train = model.odor_strength_module.molecule_encoder.encode(X_train)
@@ -1409,7 +1442,7 @@ encoded_X_test = model.odor_strength_module.molecule_encoder.encode(X_test)
 feature_names = encoded_X_test.columns if hasattr(encoded_X_test, 'columns') else [f'Feature {i}' for i in range(encoded_X_test.shape[1])]
 
 
-# In[ ]:
+# In[44]:
 
 
 # Check the shape and type of encoded data
@@ -1429,7 +1462,7 @@ else:
 print("Final shapes - Train:", encoded_X_train_np.shape, "Test:", encoded_X_test_np.shape)
 
 
-# In[ ]:
+# In[45]:
 
 
 # Create a wrapper function for the predictor that works with encoded features
@@ -1457,7 +1490,7 @@ print("Test prediction shape:", test_pred.shape)
 print("Test predictions:", test_pred.flatten())
 
 
-# In[ ]:
+# In[46]:
 
 
 # Model-agnostic SHAP analysis using encoded features
@@ -1474,13 +1507,14 @@ shap_values = explainer(encoded_X_test_np[:test_sample_size])
 
 # ### Dealing with Feature Correlation
 
-# In[ ]:
+# In[54]:
 
 
 # correlation matrix
 
 encoded_X =  model.odor_strength_module.molecule_encoder.encode(df_odor_strength['canonical_smiles'].values)
-correlation_matrix = encoded_X.corr().fillna(0)
+encoded_X_df = pd.DataFrame(encoded_X, columns=feature_names)
+correlation_matrix = encoded_X_df.corr().fillna(0)
 
 fig = plt.figure(figsize=(FIGURE_WIDTH_LONG, FIGURE_WIDTH_LONG))
 plt.imshow(correlation_matrix, cmap=mycmap, vmin=-1, vmax=1)
@@ -1501,7 +1535,7 @@ plt.show()
 
 # #### Agglomerative Clustering
 
-# In[ ]:
+# In[48]:
 
 
 # Improved feature grouping using agglomerative clustering
@@ -1511,7 +1545,7 @@ from scipy.spatial.distance import squareform
 import matplotlib.pyplot as plt
 
 
-# In[ ]:
+# In[50]:
 
 
 # Agglomerative clustering
@@ -1579,21 +1613,30 @@ for group in sorted(multi_member_groups, key=lambda x: x['size'], reverse=True)[
     print(f"  Cluster {group['cluster_id']} ({group['size']} features): {group['representative']} represents {group['members']}{'...' if len(group['members']) > 5 else ''}")
 
 print(f"\nComparison:")
-print(f"Greedy approach: {len(selected_features_idx)} representative features, {len([c for c in cluster_info if c['size'] > 1])} multi-member groups")
 print(f"Agglomerative: {len(selected_features_idx)} representative features, {len(multi_member_groups)} multi-member groups")
 
 # Show cluster size distributions
-greedy_sizes = [c['size'] for c in cluster_info if c['size'] > 1]
 agg_sizes = [c['size'] for c in cluster_info if c['size'] > 1]
 
 print(f"\nCluster size statistics:")
-print(f"Greedy - Max: {max(greedy_sizes) if greedy_sizes else 0}, Mean: {np.mean(greedy_sizes) if greedy_sizes else 0:.1f}, Median: {np.median(greedy_sizes) if greedy_sizes else 0:.1f}")
 print(f"Agglomerative - Max: {max(agg_sizes) if agg_sizes else 0}, Mean: {np.mean(agg_sizes) if agg_sizes else 0:.1f}, Median: {np.median(agg_sizes) if agg_sizes else 0:.1f}")
+
+
+# In[59]:
+
+
+groups_dict = { # representative: group
+    'TPSA': 'Polarity',
+    'MolWt': 'Weight and Shape',
+    'NumAtomStereoCenters': 'Rings',
+    'PEOE_VSA10': 'Alcohol Groups',
+    'Kappa2': 'Branching'
+    }
 
 
 # ### Global SHAP feature importance
 
-# In[ ]:
+# In[63]:
 
 
 import matplotlib.pyplot as plt
@@ -1630,11 +1673,15 @@ if num_bars > 0:
     for i, p in enumerate(patches):
         p.set_facecolor(bar_color)
 
+
 y_tick_locs = ax.get_yticks()
 y_tick_labels = [t.get_text() for t in ax.get_yticklabels()]
-new_y_tick_labels = ['Polarity', 'Weight and Shape', 'Rings', 'Alcohol Groups', 'Branching', f'{133 - len(y_tick_labels)} other Groups']
-if len(new_y_tick_labels) == len(y_tick_labels) // 2:
-    ax.set_yticklabels(2*new_y_tick_labels)
+if not any('feature' in name.lower() for name in y_tick_labels):
+    # For RDKit Descriptor names in study
+    new_y_tick_labels = [groups_dict.get(name, name) for name in y_tick_labels] + [f'{133 - len(y_tick_labels)} other Groups']
+    if len(new_y_tick_labels) == len(y_tick_labels) // 2:
+        ax.set_yticklabels(2*new_y_tick_labels)
+
 
 current_size = fig.get_size_inches()
 new_width = FIGURE_WIDTH
@@ -1651,14 +1698,13 @@ plt.savefig('figures/shap_feature_importance.svg')
 plt.savefig('figures/shap_feature_importance.png', dpi=DPI)
 plt.show()
 
-print("Y tick labels:", y_tick_labels)
 print(fig.get_size_inches()*2.54)
 
 
 df_clustered_shap_values = pd.DataFrame(clustered_shap_values, columns=selected_features_names)
 
 
-# In[ ]:
+# In[64]:
 
 
 # Import matplotlib
@@ -1757,6 +1803,7 @@ def plot_summary_plot_feature_group(most_important_feature: str) -> None:
     plt.tight_layout()
     plt.savefig(f'figures/shap_summary_plot_{most_important_cluster["representative"]}_cluster.pdf', dpi=DPI)
     plt.show()
+    return most_important_feature, cluster_feature_names
 
 important_features = []
 representative_features = []
@@ -1767,16 +1814,8 @@ for representative_feature in y_tick_labels[:5]:
     important_features.extend(cluster_features)
 
 
-# In[ ]:
+# In[65]:
 
-
-groups_dict = { # representative: group
-    'TPSA': 'Polarity',
-    'MolWt': 'Weight and Shape',
-    'NumAtomStereoCenters': 'Rings',
-    'PEOE_VSA10': 'Alcohol Groups',
-    'Kappa2': 'Branching'
-    }
 
 df_clusterd_shap_values_renamed = df_clustered_shap_values.rename(columns=lambda x: groups_dict.get(x, x))
 
@@ -1796,7 +1835,11 @@ subplot_labels = ['a', 'b', 'c', 'd']
 for i, category in enumerate([0, 1, 2, 3]):
     category_mask = preds_rounded == category
     category_shap_data = df_clusterd_shap_values_renamed[category_mask]
-    mean_shap_values = category_shap_data[groups_dict.values()].mean()
+    # Check if all values from groups_dict are present in the columns
+    if all(col in category_shap_data.columns for col in groups_dict.values()):
+        mean_shap_values = category_shap_data[list(groups_dict.values())].mean(axis=0)
+    else:
+        mean_shap_values = category_shap_data.iloc[:,:5].mean(axis=0)
     bars = axes[i].barh(range(len(mean_shap_values)), mean_shap_values.values, color=category_colors[i], alpha=0.7)
     axes[i].set_xlim(0, 0.6)
     if i % 2 == 0:
@@ -1827,7 +1870,7 @@ plt.show()
 
 # ### Local Explanations
 
-# In[ ]:
+# In[78]:
 
 
 def local_explain(smiles: str, background: pd.DataFrame | np.ndarray, save_path: str | None = None, dpi: int = DPI) -> None:
@@ -1865,8 +1908,6 @@ def local_explain(smiles: str, background: pd.DataFrame | np.ndarray, save_path:
     selected_clusters.columns = [mapping.get(col, col) for col in selected_clusters.columns]
     other_clusters =  clustered_shap_values.sum() - selected_clusters.values.sum()
     clustered_shap_values = selected_clusters.values
-    print(y.mean(axis=None))
-    print(shap_values_local.base_values)
     
     shap_values_clustered = shap.Explanation(values=clustered_shap_values,
                                     base_values=shap_values_local.base_values + other_clusters,
