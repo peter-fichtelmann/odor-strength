@@ -17,6 +17,7 @@ rdkit==2025.3.5
 Requests==2.32.3
 scikit_learn==1.6.1
 seaborn==0.13.2
+shap==0.48.0
 torch==2.6.0
 tqdm==4.67.1
 transformers==4.49.0
