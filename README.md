@@ -25,8 +25,7 @@ The odor strength prediction pipeline involves:
 Clone this repository to your local machine:
 
 ```bash
-git clone https://github.com/peter-fichtelmann/FragranceFinder.git
-cd FragranceFinder/odor_strength/publication/code/odor_strength_module
+git clone https://github.com/peter-fichtelmann/odor-strength.git
 ```
 
 ### 2. Set up environment
