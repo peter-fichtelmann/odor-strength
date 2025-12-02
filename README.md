@@ -20,7 +20,16 @@ The odor strength prediction pipeline involves:
 
 ## Workflow
 
-### 1. Set up environment
+### 1. Clone the Repository
+
+Clone this repository to your local machine:
+
+```bash
+git clone https://github.com/peter-fichtelmann/FragranceFinder.git
+cd FragranceFinder/odor_strength/publication/code/odor_strength_module
+```
+
+### 2. Set up environment
 
 Install Python 3.12.2 (e.g. via conda)
 ```bash
@@ -33,7 +42,7 @@ Install dependencies
 pip install -r requirements.txt
 ```
 
-### 2. Dataset Curation (Required First Step)
+### 3. Dataset Curation (Required First Step)
 
 Execute before dataset analysis and  scripts (Runtime up to 12h):
 
@@ -51,7 +60,7 @@ This script:
 - Cleans and processes molecular data
 - Creates the curated dataset files (`df_odor_strength.csv`, `odor_strength_groups.csv`)
 
-### 3. Dataset Analysis (Optional)
+### 4. Dataset Analysis (Optional)
 
 ```bash
 python dataset_analysis.py
@@ -68,7 +77,7 @@ This script:
 - Tests unsupervised clustering
 - **Requires**: Dataset curation to be completed first
 
-### 4. Model Training & Validation & Insights (Optional)
+### 5. Model Training & Validation & Insights (Optional)
 
 ```bash
 python model_training_validation_insights.py
@@ -87,7 +96,7 @@ This script:
 - Tests on external validation datasets from Keller et al.
 - **Requires**: Dataset curation to be completed first
 
-### 5. Model Application (Independent)
+### 6. Model Application (Independent)
 
 ```bash
 jupyter notebook best-performing_model_application.ipynb
