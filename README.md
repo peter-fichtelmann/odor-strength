@@ -95,7 +95,7 @@ jupyter notebook model_training_validation_insights.ipynb
 
 This script:
 - Trains various molecular encoder-predictor combinations
-- Performs hyperparameter optimization
+- Performs hyperparameter optimization (1 trial default, set N_TRIALS for more)
 - Evaluates model performance with cross-validation
 - Conducts SHAP analysis for feature importance
 - Tests on external validation datasets from Keller et al.
