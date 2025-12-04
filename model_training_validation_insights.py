@@ -96,10 +96,10 @@ odor_strength_module.evaluate_kFold(X_train, y_train, groups=groups_train, n_spl
 # In[6]:
 
 
-N_REPEATS = 1
-N_FOLDS = 2
+N_REPEATS = 10
+N_FOLDS = 10 
 N_TRIALS = 1
-LIMIT = 1
+LIMIT = 100
 
 callback = MaxTrialsCallback(
     n_trials=LIMIT,
