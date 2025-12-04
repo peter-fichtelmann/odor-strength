@@ -1123,7 +1123,7 @@ else:
 
 keller_2016 = keller_2016[keller_2016['canonical_smiles'].notna()]
 keller_2016['predicted_intensity'] = model.predict(keller_2016['canonical_smiles'].tolist())
-keller_2016['predicted_intensity_rounded'] = keller_2016['predicted_intensity'].round()
+keller_2016['predicted_intensity_rounded'] = keller_2016['predicted_intensity'].round().astype(float)
 
 
 # In[38]:
