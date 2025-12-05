@@ -93,11 +93,11 @@ odor_strength_module.evaluate_kFold(X_train, y_train, groups=groups_train, n_spl
 
 # ### Hyperparameter Optimization
 
-# In[6]:
+# In[ ]:
 
 
 N_REPEATS = 10
-N_FOLDS = 10 
+N_FOLDS = 10
 N_TRIALS = 1
 LIMIT = 100
 
@@ -1118,7 +1118,7 @@ else:
     keller_2016.to_csv(cleaned_keller_path, index=False)
 
 
-# In[37]:
+# In[ ]:
 
 
 keller_2016 = keller_2016[keller_2016['canonical_smiles'].notna()]
@@ -1434,11 +1434,15 @@ mycmap = LinearSegmentedColormap.from_list("mycmap", colors, N=256)
 # 
 # Setting up SHAP (SHapley Additive exPlanations) analysis to understand feature importance and model interpretability for the best-performing odor strength prediction model.
 
-# In[43]:
+# In[ ]:
 
 
-encoded_X_train = model.odor_strength_module.molecule_encoder.encode(X_train)
-encoded_X_test = model.odor_strength_module.molecule_encoder.encode(X_test)
+if best_hyperparameters_direct['predictor_name'] in ['ChemPropPredictor', 'ChemeleonPredictor']:
+    encoded_X_train = model.odor_strength_module.odor_strength_predictor.encode(X_train)
+    encoded_X_test = model.odor_strength_module.odor_strength_predictor.encode(X_test)
+else:
+    encoded_X_train = model.odor_strength_module.molecule_encoder.encode(X_train)
+    encoded_X_test = model.odor_strength_module.molecule_encoder.encode(X_test)
 feature_names = encoded_X_test.columns if hasattr(encoded_X_test, 'columns') else [f'Feature {i}' for i in range(encoded_X_test.shape[1])]
 
 
@@ -1462,7 +1466,7 @@ else:
 print("Final shapes - Train:", encoded_X_train_np.shape, "Test:", encoded_X_test_np.shape)
 
 
-# In[45]:
+# In[ ]:
 
 
 # Create a wrapper function for the predictor that works with encoded features
@@ -1479,8 +1483,10 @@ def predictor_wrapper(encoded_features: np.ndarray | pd.DataFrame) -> np.ndarray
     Returns:
         np.ndarray: Predicted odor strength values
     """
-
-    predictions = model.odor_strength_module.odor_strength_predictor.predict(encoded_features.values if hasattr(encoded_features, 'values') else encoded_features)
+    if best_hyperparameters_direct['predictor_name'] in ['ChemPropPredictor', 'ChemeleonPredictor']:
+        predictions = model.odor_strength_module.odor_strength_predictor.predict_from_fingerprint(encoded_features.values if hasattr(encoded_features, 'values') else encoded_features)
+    else:
+        predictions = model.odor_strength_module.odor_strength_predictor.predict(encoded_features.values if hasattr(encoded_features, 'values') else encoded_features)
     
     return predictions
 
@@ -1490,7 +1496,7 @@ print("Test prediction shape:", test_pred.shape)
 print("Test predictions:", test_pred.flatten())
 
 
-# In[46]:
+# In[ ]:
 
 
 # Model-agnostic SHAP analysis using encoded features
@@ -1500,7 +1506,7 @@ background_sample_size = encoded_X_train.shape[0]
 test_sample_size = encoded_X_test.shape[0]
 
 # Create the SHAP explainer using the predictor wrapper
-explainer = shap.Explainer(predictor_wrapper, encoded_X_train_np[:background_sample_size], feature_names=feature_names)
+explainer = shap.Explainer(predictor_wrapper, encoded_X_train_np[:background_sample_size], feature_names=feature_names, max_evals=4100)
 
 shap_values = explainer(encoded_X_test_np[:test_sample_size])
 
