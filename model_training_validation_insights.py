@@ -1440,9 +1440,11 @@ mycmap = LinearSegmentedColormap.from_list("mycmap", colors, N=256)
 if best_hyperparameters_direct['predictor_name'] in ['ChemPropPredictor', 'ChemeleonPredictor']:
     encoded_X_train = model.odor_strength_module.odor_strength_predictor.encode(X_train)
     encoded_X_test = model.odor_strength_module.odor_strength_predictor.encode(X_test)
+    encoded_X = model.odor_strength_module.odor_strength_predictor.encode(X)
 else:
     encoded_X_train = model.odor_strength_module.molecule_encoder.encode(X_train)
     encoded_X_test = model.odor_strength_module.molecule_encoder.encode(X_test)
+    encoded_X = model.odor_strength_module.molecule_encoder.encode(X)
 feature_names = encoded_X_test.columns if hasattr(encoded_X_test, 'columns') else [f'Feature {i}' for i in range(encoded_X_test.shape[1])]
 
 
@@ -1513,12 +1515,12 @@ shap_values = explainer(encoded_X_test_np[:test_sample_size])
 
 # ### Dealing with Feature Correlation
 
-# In[54]:
+# In[ ]:
 
 
 # correlation matrix
+FIGURE_WIDTH_LONG = 17.1 / 2.54
 
-encoded_X =  model.odor_strength_module.molecule_encoder.encode(df_odor_strength['canonical_smiles'].values)
 encoded_X_df = pd.DataFrame(encoded_X, columns=feature_names)
 correlation_matrix = encoded_X_df.corr().fillna(0)
 
@@ -1876,7 +1878,7 @@ plt.show()
 
 # ### Local Explanations
 
-# In[78]:
+# In[ ]:
 
 
 def local_explain(smiles: str, background: pd.DataFrame | np.ndarray, save_path: str | None = None, dpi: int = DPI) -> None:
@@ -1893,11 +1895,15 @@ def local_explain(smiles: str, background: pd.DataFrame | np.ndarray, save_path:
         dpi (int): Resolution for saved figures
     """
     max_display = 6
-    encoded_mol = model.odor_strength_module.molecule_encoder.encode([smiles])
+    if best_hyperparameters_direct['predictor_name'] in ['ChemPropPredictor', 'ChemeleonPredictor']:
+        encoded_mol = model.odor_strength_module.odor_strength_predictor.encode(2*[smiles])[0:1]
+        print(encoded_mol.shape)
+    else:
+        encoded_mol = model.odor_strength_module.molecule_encoder.encode([smiles])
     encoded_mol_np = encoded_mol.values if hasattr(encoded_mol, 'values') else encoded_mol
     background_values = background.values if hasattr(background, 'values') else background
 
-    explainer = shap.Explainer(predictor_wrapper, background_values, feature_names=background.columns.tolist() if hasattr(background, 'columns') else None)
+    explainer = shap.Explainer(predictor_wrapper, background_values, feature_names=background.columns.tolist() if hasattr(background, 'columns') else None, max_evals=4100)
     shap_values_local = explainer(encoded_mol_np)
     clustered_shap_values = np.zeros((shap_values_local.values.shape[0], len(feature_groups)))
     for cluster_id, feature_indices in enumerate(feature_groups):
