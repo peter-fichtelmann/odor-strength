@@ -1,6 +1,6 @@
 # Odor Strength Module
 
-[![DOI](https://zenodo.org/badge/1100439173.svg)](https://doi.org/10.5281/zenodo.17815682)
+[![DOI](https://zenodo.org/badge/1100439173.svg)](https://doi.org/10.5281/zenodo.17828661)
 
 
 This module contains the Python code (version 1.0) of the manuscript: Machine learning for smell: Ordinal odor strength prediction of molecular perfumery components (DOI coming soon).
