@@ -1422,6 +1422,38 @@ class ChemPropMPNNPredictor(PredictorBase):
                 one_sample = False
             predictions = self.label_binarizer.inverse_binarize_labels(predictions, dealing_with_incosistency=self.dealing_with_incosistency, one_sample=one_sample)
         return predictions
+    
+    def predict_from_fingerprint(self, X_fp: np.ndarray) -> np.ndarray:
+        X_fp = torch.tensor(X_fp, dtype=torch.float32)
+        with torch.no_grad():
+            predictions = self.model.predictor(X_fp)
+        predictions = predictions.cpu().numpy()
+        if self.binarize_labels:
+            if len(np.squeeze(predictions).shape) == 1:
+                one_sample = True
+            else:
+                one_sample = False
+            predictions = self.label_binarizer.inverse_binarize_labels(predictions, dealing_with_incosistency=self.dealing_with_incosistency, one_sample=one_sample)
+        return predictions
+    
+    def encode(self, X: np.ndarray) -> np.ndarray:
+        """Generates molecular embeddings using the MPNN model.
+
+        Parameters:
+            X (np.ndarray): Array of SMILES strings representing the molecules.
+
+        Returns:
+            np.ndarray: Array of molecular embeddings.
+        """
+        data_points = [MoleculeDatapoint.from_smi(smiles) for smiles in X]
+        dataset = MoleculeDataset(data_points, featurizer=self.featurizer)
+        dataloader = build_dataloader(dataset, batch_size=self.batch_size, shuffle=False)
+        embeddings = []
+        for batch in dataloader:
+            batch_embeddings = self.model.fingerprint(batch.bmg, batch.V_d, batch.X_d)
+            embeddings.append(batch_embeddings.detach().cpu().numpy())
+        embeddings = np.concatenate(embeddings, axis=0)
+        return embeddings
         
     def get_ffn_class(self, objective):
         if objective == 'binary_crossentropy':
