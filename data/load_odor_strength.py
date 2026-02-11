@@ -28,8 +28,8 @@ def load_odor_strength(df_goodscents, df_pubchem, target_dataset):
     df_odor_strength['has_odor'] = (df_odor_strength['numerical_strength'] > 0) * 1
     print('Number of SMILES with dots:', df_odor_strength['canonical_smiles'].str.contains('\.', regex=True).sum())
     df_odor_strength = substance_cleaner.remove_metal_ion_substances(df_odor_strength, 'canonical_smiles')
-    df_odor_strength = substance_cleaner.remove_F_Br_I_substances(df_odor_strength, 'canonical_smiles')
-    df_odor_strength = substance_cleaner.correct_smiles_dots(df_odor_strength, 'name', 'canonical_smiles')
+    # df_odor_strength = substance_cleaner.remove_F_Br_I_substances(df_odor_strength, 'canonical_smiles')
+    # df_odor_strength = substance_cleaner.correct_smiles_dots(df_odor_strength, 'name', 'canonical_smiles')
     df_odor_strength = substance_cleaner.remove_smiles_dots_compounds(df_odor_strength, 'canonical_smiles')
     df_odor_strength = df_odor_strength[~df_odor_strength['canonical_smiles'].duplicated(keep='first')]
     
@@ -51,7 +51,7 @@ def load_odor_strength(df_goodscents, df_pubchem, target_dataset):
         df_odor_strength = df_odor_strength[df_odor_strength['canonical_smiles'].isin(filtered_smiles)]
         return df_odor_strength
     
-    df_odor_strength = filter_formulas(df_odor_strength, df_odor_strength[df_odor_strength['source'] == target_dataset]['canonical_smiles'])
+    # df_odor_strength = filter_formulas(df_odor_strength, df_odor_strength[df_odor_strength['source'] == target_dataset]['canonical_smiles'])
     smiles_list = df_odor_strength['canonical_smiles'][~df_odor_strength['canonical_smiles'].duplicated(keep='first')].tolist()
     df_morgan_similarities_odor_strength = check_for_outlier_molecules(smiles_list, smiles_list)
     dist_matrix = df_morgan_similarities_odor_strength.values

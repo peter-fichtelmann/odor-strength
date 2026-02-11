@@ -10,3 +10,6 @@ chemeleon_mp.pt
 /data/goodscents/goodscents.csv
 /data/df_odor_strength.csv
 /data/odor_strength_groups.csv
+/data/dataset_curation revision.ipynb
+/data/scs_synthability_score/
+dataset_curation revision.ipynb

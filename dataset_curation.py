@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-
-# In[2]:
+# In[1]:
 
 
 # tested with python==3.12.2
@@ -10,7 +9,7 @@
 
 # ## Dataset Curation and Analysis
 
-# In[1]:
+# In[2]:
 
 
 import os
@@ -21,7 +20,7 @@ from data.load_odor_strength import load_odor_strength
 
 # ### Web Scraping
 
-# In[2]:
+# In[3]:
 
 
 GOODSCENTS_PATH = 'data/goodscents/'
@@ -33,7 +32,8 @@ if not os.path.exists(GOODSCENTS_PATH):
 if not os.path.exists(PUBCHEM_PATH):
     os.makedirs(PUBCHEM_PATH)
 
-# In[3]:
+
+# In[4]:
 
 
 if not os.path.exists(GOODSCENTS_PATH + 'goodscents.csv'):
@@ -45,7 +45,7 @@ if not os.path.exists(GOODSCENTS_PATH + 'goodscents.csv'):
 df_goodscents = pd.read_csv(GOODSCENTS_PATH + 'goodscents.csv', index_col=0)
 
 
-# In[4]:
+# In[5]:
 
 
 if not os.path.exists(PUBCHEM_PATH + 'pubchem.csv'):
@@ -59,19 +59,19 @@ df_pubchem = pd.read_csv(PUBCHEM_PATH + 'pubchem.csv', index_col=0)
 
 # #### Data cleaning
 
-# In[5]:
+# In[6]:
 
 
 df_odor_strength, groups = load_odor_strength(df_goodscents, df_pubchem, target_dataset='GoodScents')
 
 
-# In[8]:
+# In[7]:
 
 
 df_odor_strength.head(5)
 
 
-# In[11]:
+# In[8]:
 
 
 print(df_odor_strength.shape)
@@ -80,20 +80,14 @@ print(df_odor_strength['numerical_strength'].value_counts(), '\n')
 print(df_odor_strength.groupby('source')['numerical_strength'].value_counts())
 
 
-# In[10]:
+# In[9]:
 
 
 df_odor_strength.to_csv('data/df_odor_strength.csv')
 
 
-# In[7]:
+# In[10]:
 
 
 pd.DataFrame(groups).to_csv('data/odor_strength_groups.csv')
-
-
-# In[ ]:
-
-
-
 

@@ -29,6 +29,8 @@ S_DOT_COLOR = 1
 colors = [okabe_ito[2], okabe_ito[3], okabe_ito[1], okabe_ito[7]]
 
 
+# Run the notebook dataset_curation.ipynb or python script dataset_curation.py first
+
 # In[3]:
 
 
@@ -78,7 +80,7 @@ umap_rdkit = umap.UMAP(n_components=2, random_state=42)
 rdkit_umap = umap_rdkit.fit_transform(rdkit_descriptors)
 
 
-# In[6]:
+# In[9]:
 
 
 # Create visualization of PCA and UMAP results colored by numerical_strength
@@ -142,10 +144,18 @@ for idx, (data, title, pca_obj) in enumerate(plot_data):
 
 plt.tight_layout()
 plt.savefig('figures/pca_umap_odor_strength.pdf', dpi=DPI)
+
+# Save rasterized version
+for ax in axes.flat:
+    ax.set_rasterized(True)
+plt.savefig('figures/pca_umap_odor_strength_rasterized.pdf', dpi=DPI)
+for ax in axes.flat:
+    ax.set_rasterized(False)
+
 plt.show()
 
 
-# In[7]:
+# In[10]:
 
 
 # Create separate plots for each numerical strength category using RDKit Descriptors PCA
@@ -178,8 +188,8 @@ for idx, strength in enumerate(strength_categories):
     
     # Set title with category name and sample count
     sample_count = mask.sum()
-    # ax.set_title(f'{category_labels[idx]} (n={sample_count})', fontsize=FONTSIZE, pad=LABELPAD)
-    print(title)
+    ax.set_title(f'{category_labels[idx]}', fontsize=FONTSIZE, pad=LABELPAD)
+    # print(title)
     
     # Add subplot label in the top right corner
     ax.text(-0.03, 1.1, f'{subplot_labels_2x2[idx]}', transform=ax.transAxes, 
@@ -201,12 +211,20 @@ for idx, strength in enumerate(strength_categories):
 
 plt.tight_layout()
 plt.savefig('figures/pca_rdkit_desc_per_odor_strength.pdf', dpi=DPI)
+
+# Save rasterized version
+for ax in axes.flat:
+    ax.set_rasterized(True)
+plt.savefig('figures/pca_rdkit_desc_per_odor_strength_rasterized.pdf', dpi=DPI)
+for ax in axes.flat:
+    ax.set_rasterized(False)
+
 plt.show()
 
 
 # ### With odorous molecules background
 
-# In[8]:
+# In[6]:
 
 
 from data.molecules.smiles_converter import SmilesCanonicalizer
@@ -302,7 +320,7 @@ def umap_analysis(s3, only_s3_fit=False, fingerprint_function=get_all_morgan_fin
 #         plt.savefig(save_path, dpi=DPI, bbox_inches='tight')
 
 
-# In[9]:
+# In[7]:
 
 
 # Create 3x2 plot showing PCA and UMAP results for different descriptor types
@@ -316,7 +334,7 @@ print("Processing RDKit Descriptors...")
 pca_rdkit, x_pca_all_rdkit, x_pca_gs_rdkit, x_pca_pubchem_rdkit, x_pca_0_rdkit, x_pca_1_rdkit, x_pca_2_rdkit, x_pca_3_rdkit, explained_var_rdkit = pca_analysis(s3_mayhew, fingerprint_function=get_all_rdkit_descriptors)
 
 
-# In[10]:
+# In[11]:
 
 
 x_umap_all_rdkit, x_umap_gs_rdkit, x_umap_pubchem_rdkit, x_umap_0_rdkit, x_umap_1_rdkit, x_umap_2_rdkit, x_umap_3_rdkit = umap_analysis(s3_mayhew, fingerprint_function=get_all_rdkit_descriptors)
@@ -334,7 +352,7 @@ x_umap_all_morgan_count, x_umap_gs_morgan_count, x_umap_pubchem_morgan_count, x_
 print("All computations completed!")
 
 
-# In[11]:
+# In[12]:
 
 
 # Create 3x2 subplot using the plot_strength function
@@ -398,10 +416,18 @@ for idx, (data_tuple, explained_var, title, row, col) in enumerate(plot_configs)
 
 plt.tight_layout()
 plt.savefig('figures/pca_umap_odor_strength_w_background.pdf', dpi=DPI)
+
+# Save rasterized version
+for ax in axes.flat:
+    ax.set_rasterized(True)
+plt.savefig('figures/pca_umap_odor_strength_w_background_rasterized.pdf', dpi=DPI)
+for ax in axes.flat:
+    ax.set_rasterized(False)
+
 plt.show()
 
 
-# In[12]:
+# In[13]:
 
 
 # Create 3x2 subplot using the plot_strength function
@@ -463,10 +489,18 @@ for idx, (data_tuple, explained_var, title, row, col) in enumerate(plot_configs)
 
 plt.tight_layout()
 plt.savefig('figures/pca_umap_gs_pubchem_w_background.pdf', dpi=DPI)
+
+# Save rasterized version
+for ax in axes.flat:
+    ax.set_rasterized(True)
+plt.savefig('figures/pca_umap_gs_pubchem_w_background_rasterized.pdf', dpi=DPI)
+for ax in axes.flat:
+    ax.set_rasterized(False)
+
 plt.show()
 
 
-# In[13]:
+# In[14]:
 
 
 # Create separate plots for each numerical strength category using RDKit Descriptors PCA
@@ -494,8 +528,8 @@ for idx, strength_data in enumerate([x_pca_0_rdkit, x_pca_1_rdkit, x_pca_2_rdkit
               )
     
     # Set title with category name and sample count
-    # ax.set_title(f'{category_labels[idx]}', fontsize=FONTSIZE, pad=LABELPAD)
-    print(title)
+    ax.set_title(f'{category_labels[idx]}', fontsize=FONTSIZE, pad=LABELPAD)
+    # print(title)
     
     # Add subplot label in the top right corner
     ax.text(-0.03, 1.1, f'{subplot_labels_2x2[idx]}', transform=ax.transAxes, 
@@ -517,6 +551,14 @@ for idx, strength_data in enumerate([x_pca_0_rdkit, x_pca_1_rdkit, x_pca_2_rdkit
 
 plt.tight_layout()
 plt.savefig('figures/pca_rdkit_desc_per_odor_strength_w_background.pdf', dpi=DPI)
+
+# Save rasterized version
+for ax in axes.flat:
+    ax.set_rasterized(True)
+plt.savefig('figures/pca_rdkit_desc_per_odor_strength_w_background_rasterized.pdf', dpi=DPI)
+for ax in axes.flat:
+    ax.set_rasterized(False)
+
 factor = 1.5
 for idx, strength_data in enumerate([x_pca_0_rdkit, x_pca_1_rdkit, x_pca_2_rdkit, x_pca_3_rdkit]):
     # Plot data points for this strength category
@@ -529,6 +571,14 @@ for idx, strength_data in enumerate([x_pca_0_rdkit, x_pca_1_rdkit, x_pca_2_rdkit
         axes[row, col].set_ylabel('Component 2', fontsize=factor*FONTSIZE, labelpad=factor*LABELPAD)
 plt.tight_layout()
 plt.savefig('figures/pca_rdkit_desc_per_odor_strength_w_background.png', dpi=DPI)
+
+# Save rasterized version of PNG as well
+for ax in axes.flat:
+    ax.set_rasterized(True)
+plt.savefig('figures/pca_rdkit_desc_per_odor_strength_w_background_rasterized.png', dpi=DPI)
+for ax in axes.flat:
+    ax.set_rasterized(False)
+
 plt.show()
 
 
@@ -574,15 +624,93 @@ print(pd.concat([pc1_top_features, pc2_top_features], axis=1).to_latex(index=Fal
 
 # PC1 as molecular size and shape measure and PC2 as polarity measure
 
+# In[8]:
+
+
+# Create a 1x2 plot combining the separated plots and dataset figure
+import matplotlib.image as mpimg
+from matplotlib.patches import Rectangle
+import cairosvg
+from io import BytesIO
+import numpy as np
+from PIL import Image
+
+fig, axes = plt.subplots(1, 2, figsize=(FIGURE_WIDTH_LONG*1.3, FIGURE_WIDTH_LONG / 1.47 * 0.65), 
+                         gridspec_kw={'wspace': 0.2})
+
+# Define subplot labels for 1x2 grid
+subplot_labels_2x2 = ['a', 'b']
+
+# Define colors for the 4 categories using okabe_ito palette
+strength_categories = [0, 1, 2, 3]
+category_labels = ['Odorless', 'Low', 'Medium', 'High']
+
+# Left: Load and display dataset figure
+ax1 = axes[0]
+# Try to load SVG first, then fall back to raster formats
+svg_path = 'figures/dataset_overview.svg'
+# Convert SVG to PNG in memory at 600 DPI, preserving original size
+png_data = cairosvg.svg2png(url=svg_path, dpi=700)
+image = Image.open(BytesIO(png_data))
+dataset_img = np.array(image)
+
+# Display image with original aspect ratio
+ax1.imshow(dataset_img, aspect='equal')
+ax1.axis('off')  # Hide axes for the image
+
+# Set the subplot limits to match the image dimensions
+height, width = dataset_img.shape[:2]
+ax1.set_xlim(0, width)
+ax1.set_ylim(height, 0)  # Flip y-axis for image coordinate system
+
+# Add subplot label
+ax1.text(-0.06, 1.1, f'{subplot_labels_2x2[0]}', transform=ax1.transAxes, 
+         fontsize=FONTSIZE+2, fontweight='bold', ha='right', va='top')
+
+# Right: PCA plot with background
+ax2 = axes[1]
+ax2.scatter(x_pca_all_rdkit[:, 0], x_pca_all_rdkit[:, 1], s=S_DOT_GREY, label='Odorous Background', c='grey', alpha=0.1)
+ax2.scatter(x_pca_0_rdkit[:, 0], x_pca_0_rdkit[:, 1], s=S_DOT_COLOR, label='Odorless', c=colors[0], alpha=0.5)
+ax2.scatter(x_pca_1_rdkit[:, 0], x_pca_1_rdkit[:, 1], s=S_DOT_COLOR, label='Low', c=colors[1], alpha=0.5)
+ax2.scatter(x_pca_2_rdkit[:, 0], x_pca_2_rdkit[:, 1], s=S_DOT_COLOR, label='Medium', c=colors[2], alpha=0.5)
+ax2.scatter(x_pca_3_rdkit[:, 0], x_pca_3_rdkit[:, 1], s=S_DOT_COLOR, label='High', c=colors[3], alpha=0.5)
+
+ax2.set_xlabel(f'Component 1', fontsize=LABELSIZE, labelpad=LABELPAD)
+ax2.set_ylabel(f'Component 2', fontsize=LABELSIZE, labelpad=LABELPAD)
+ax2.set_xticks([])
+ax2.set_yticks([])
+ax2.tick_params(axis='both', which='both', length=0)
+ax2.set_xlim(x_pca_all_rdkit[:, 0].min() - 5, x_pca_all_rdkit[:, 0].max() + 5)
+ax2.set_ylim(x_pca_all_rdkit[:, 1].min() - 5, x_pca_all_rdkit[:, 1].max() + 5)
+ax2.legend(fontsize=LABELSIZE-1, loc='upper right', markerscale=2)
+
+# Add subplot label
+ax2.text(-0.03, 1.1, f'{subplot_labels_2x2[1]}', transform=ax2.transAxes, 
+         fontsize=FONTSIZE+2, fontweight='bold', ha='right', va='top')
+
+
+plt.tight_layout()
+plt.savefig('figures/analysis_main.pdf', dpi=DPI, bbox_inches='tight', pad_inches=0)
+plt.savefig('figures/analysis_main.svg', bbox_inches='tight', pad_inches=0)
+
+# Save rasterized version to reduce file size while maintaining resolution
+# Rasterize scatter plots but keep text/labels as vectors
+ax2.set_rasterized(True)  # Rasterize the PCA scatter plot
+plt.savefig('figures/analysis_main_rasterized.pdf', dpi=DPI, bbox_inches='tight', pad_inches=0)
+ax2.set_rasterized(False)  # Reset for display
+
+plt.show()
+
+
 # ## Clustering
 
-# In[16]:
+# In[ ]:
 
 
 # Clustering analysis on high-dimensional descriptors
 from sklearn.cluster import KMeans, DBSCAN, SpectralClustering, AgglomerativeClustering
 from sklearn.mixture import GaussianMixture
-from sklearn.metrics import adjusted_rand_score, silhouette_score
+from sklearn.metrics import adjusted_rand_score, silhouette_score, normalized_mutual_info_score, adjusted_mutual_info_score
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -753,6 +881,9 @@ for desc_name, desc_data in descriptors.items():
                 else:
                     silhouette = float('nan')
                 
+                nmi = normalized_mutual_info_score(true_labels, best_labels)
+                ami = adjusted_mutual_info_score(true_labels, best_labels)
+                
                 # Count clusters (excluding noise for DBSCAN)
                 unique_clusters = set(best_labels)
                 if -1 in unique_clusters:  # DBSCAN noise
@@ -766,6 +897,8 @@ for desc_name, desc_data in descriptors.items():
                     'Descriptor': desc_name,
                     'Algorithm': alg_name,
                     'ARI': best_ari,
+                    'NMI': nmi,
+                    'AMI': ami,
                     'Silhouette': silhouette,
                     'N_Clusters': n_clusters,
                     'Noise_Points': noise_points,
@@ -773,7 +906,7 @@ for desc_name, desc_data in descriptors.items():
                 })
                 
                 silh_display = f"{silhouette:.3f}" if not pd.isna(silhouette) else "N/A"
-                print(f"✓ ARI: {best_ari:.3f}, Silhouette: {silh_display}")
+                print(f"✓ ARI: {best_ari:.3f}, NMI: {nmi:.3f}, AMI: {ami:.3f}, Silhouette: {silh_display}")
                 print(f"    Best params: {best_params}")
                 
             else:
@@ -781,10 +914,12 @@ for desc_name, desc_data in descriptors.items():
                     'Descriptor': desc_name,
                     'Algorithm': alg_name,
                     'ARI': float('nan'),
+                    'NMI': float('nan'),
+                    'AMI': float('nan'),
                     'Silhouette': float('nan'),
                     'N_Clusters': float('nan'),
                     'Noise_Points': float('nan'),
-                    'Best_Params': 'Failed'
+                    'Best_Params': 'Failed',
                 })
                 print("✗ Failed to find valid clustering")
             
@@ -794,6 +929,8 @@ for desc_name, desc_data in descriptors.items():
                 'Descriptor': desc_name,
                 'Algorithm': alg_name,
                 'ARI': float('nan'),
+                'NMI': float('nan'),
+                'AMI': float('nan'),
                 'Silhouette': float('nan'),
                 'N_Clusters': float('nan'),
                 'Noise_Points': float('nan'),
@@ -805,18 +942,20 @@ results_df = pd.DataFrame(results)
 
 print("\nNotes:")
 print("- ARI (Adjusted Rand Index): Measures similarity to true labels (higher is better, max=1.0)")
+print("- NMI (Normalized Mutual Information): Measures label agreement (higher is better, max=1.0)")
+print("- AMI (Adjusted Mutual Information): Adjusted for chance (higher is better, max=1.0)")
 print("- Silhouette Score: Measures cluster quality (higher is better, range [-1,1])")
 print("- Noise points only apply to DBSCAN algorithm")
 print("- Best parameters show the hyperparameter combination that achieved the highest ARI score")
 
 
-# In[ ]:
+# In[17]:
 
 
 results_df
 
 
-# In[ ]:
+# In[20]:
 
 
 print(results_df.to_latex(index=False, columns=['Descriptor', 'Algorithm', 'ARI', 'Silhouette'], float_format="%.3f"))
@@ -824,10 +963,10 @@ print(results_df.to_latex(index=False, columns=['Descriptor', 'Algorithm', 'ARI'
 
 # ### Dataset figure
 
-# In[ ]:
+# In[18]:
 
 
-# Create a 2x2 plot combining the separated plots and dataset figure
+# Create a 1x2 plot combining the separated plots and dataset figure
 import matplotlib.image as mpimg
 from matplotlib.patches import Rectangle
 import cairosvg
@@ -835,135 +974,92 @@ from io import BytesIO
 import numpy as np
 from PIL import Image
 
-fig, axes = plt.subplots(2, 2, figsize=(FIGURE_WIDTH_LONG*1.3, FIGURE_WIDTH_LONG / 1.47 * 1.3), 
-                         gridspec_kw={'hspace': 0.2, 'wspace': 0.2})
+fig, axes = plt.subplots(1, 2, figsize=(FIGURE_WIDTH_LONG*1.3, FIGURE_WIDTH_LONG / 1.47 * 0.65), 
+                         gridspec_kw={'wspace': 0.2})
 
-# Define subplot labels for 2x2 grid
-subplot_labels_2x2 = ['a', 'b', 'c', 'd']
+# Define subplot labels for 1x2 grid
+subplot_labels = ['a', 'b']
 
 # Define colors for the 4 categories using okabe_ito palette
 strength_categories = [0, 1, 2, 3]
 category_labels = ['Odorless', 'Low', 'Medium', 'High']
 
-# Top left: Load and display dataset figure
-ax1 = axes[0, 0]
-# Try to load SVG first, then fall back to raster formats
-svg_path = 'figures/dataset_overview.svg'
-# Convert SVG to PNG in memory at 600 DPI, preserving original size
-png_data = cairosvg.svg2png(url=svg_path, dpi=700)
-image = Image.open(BytesIO(png_data))
-dataset_img = np.array(image)
-
-# Display image with original aspect ratio
-ax1.imshow(dataset_img, aspect='equal')
-ax1.axis('off')  # Hide axes for the image
-
-# Set the subplot limits to match the image dimensions
-height, width = dataset_img.shape[:2]
-ax1.set_xlim(0, width)
-ax1.set_ylim(height, 0)  # Flip y-axis for image coordinate system
-
-# Add subplot label
-ax1.text(-0.06, 1.1, f'{subplot_labels_2x2[0]}', transform=ax1.transAxes, 
-         fontsize=FONTSIZE+2, fontweight='bold', ha='right', va='top')
-
-# Top right: PCA plot with background
-ax2 = axes[0, 1]
-ax2.scatter(x_pca_all_rdkit[:, 0], x_pca_all_rdkit[:, 1], s=S_DOT_GREY, label='Odorous Background', c='grey', alpha=0.1)
-ax2.scatter(x_pca_0_rdkit[:, 0], x_pca_0_rdkit[:, 1], s=S_DOT_COLOR, label='Odorless', c=colors[0], alpha=0.5)
-ax2.scatter(x_pca_1_rdkit[:, 0], x_pca_1_rdkit[:, 1], s=S_DOT_COLOR, label='Low', c=colors[1], alpha=0.5)
-ax2.scatter(x_pca_2_rdkit[:, 0], x_pca_2_rdkit[:, 1], s=S_DOT_COLOR, label='Medium', c=colors[2], alpha=0.5)
-ax2.scatter(x_pca_3_rdkit[:, 0], x_pca_3_rdkit[:, 1], s=S_DOT_COLOR, label='High', c=colors[3], alpha=0.5)
-
-ax2.set_xlabel(f'Component 1', fontsize=LABELSIZE, labelpad=LABELPAD)
-ax2.set_ylabel(f'Component 2', fontsize=LABELSIZE, labelpad=LABELPAD)
-ax2.set_xticks([])
-ax2.set_yticks([])
-ax2.tick_params(axis='both', which='both', length=0)
-ax2.set_xlim(x_pca_all_rdkit[:, 0].min() - 5, x_pca_all_rdkit[:, 0].max() + 5)
-ax2.set_ylim(x_pca_all_rdkit[:, 1].min() - 5, x_pca_all_rdkit[:, 1].max() + 5)
-ax2.legend(fontsize=LABELSIZE-1, loc='upper right', markerscale=2)
-
-# Add subplot label
-ax2.text(-0.03, 1.1, f'{subplot_labels_2x2[1]}', transform=ax2.transAxes, 
-         fontsize=FONTSIZE+2, fontweight='bold', ha='right', va='top')
-
-# Bottom left: PCA colored by true labels
-ax3 = axes[1, 0]
+# Left: PCA colored by true labels
+ax1 = axes[0]
 for cat_idx, strength in enumerate(strength_categories):
     mask = df['numerical_strength'] == strength
-    ax3.scatter(rdkit_pca[mask, 0], rdkit_pca[mask, 1], 
+    ax1.scatter(rdkit_pca[mask, 0], rdkit_pca[mask, 1], 
               c=colors[cat_idx], 
               label=category_labels[cat_idx],
               alpha=0.5, 
               s=1)
 
-ax3.set_xlabel(f'Component 1', fontsize=LABELSIZE, labelpad=LABELPAD)
-ax3.set_ylabel(f'Component 2', fontsize=LABELSIZE, labelpad=LABELPAD)
-ax3.tick_params(labelbottom=False, labelleft=False, length=0)
-ax3.legend(fontsize=LABELSIZE-1, loc='upper right', markerscale=3)
+ax1.set_xlabel(f'Component 1', fontsize=LABELSIZE, labelpad=LABELPAD)
+ax1.set_ylabel(f'Component 2', fontsize=LABELSIZE, labelpad=LABELPAD)
+ax1.tick_params(labelbottom=False, labelleft=False, length=0)
+ax1.legend(fontsize=LABELSIZE-1, loc='upper right', markerscale=3)
 
 # Set axis limits to match the background plot
 x_min, x_max = rdkit_pca[:, 0].min() - 5, rdkit_pca[:, 0].max() + 5
 y_min, y_max = rdkit_pca[:, 1].min() - 5, rdkit_pca[:, 1].max() + 5
-ax3.set_xlim(x_min, x_max)
-ax3.set_ylim(y_min, y_max)
+ax1.set_xlim(x_min, x_max)
+ax1.set_ylim(y_min, y_max)
 
 # Add subplot label
-ax3.text(-0.03, 1.1, f'{subplot_labels_2x2[2]}', transform=ax3.transAxes, 
+ax1.text(-0.03, 1.1, f'{subplot_labels[0]}', transform=ax1.transAxes, 
          fontsize=FONTSIZE+2, fontweight='bold', ha='right', va='top')
 
-# Bottom right: PCA colored by GMM clusters
+# Right: PCA colored by GMM clusters
 # First perform GMM clustering
 best_gmm = GaussianMixture(n_components=4, covariance_type='spherical', 
                           max_iter=100, tol=0.001, random_state=42)
 gmm_cluster_labels = best_gmm.fit_predict(rdkit_descriptors.values)
 
-ax4 = axes[1, 1]
+ax2 = axes[1]
 cluster_labels_unique = sorted(set(gmm_cluster_labels))
 
 for cluster_idx in cluster_labels_unique:
     mask = gmm_cluster_labels == cluster_idx
-    ax4.scatter(rdkit_pca[mask, 0], rdkit_pca[mask, 1], 
+    ax2.scatter(rdkit_pca[mask, 0], rdkit_pca[mask, 1], 
               c=colors[cluster_idx], 
               label=f'Cluster {cluster_idx}',
               alpha=0.5, 
               s=1)
 
-ax4.set_xlabel(f'Component 1', fontsize=LABELSIZE, labelpad=LABELPAD)
-ax4.set_ylabel(f'Component 2', fontsize=LABELSIZE, labelpad=LABELPAD)
-ax4.tick_params(labelbottom=False, labelleft=False, length=0)
-ax4.legend(fontsize=LABELSIZE-1, loc='upper right', markerscale=3)
-ax4.set_xlim(x_min, x_max)
-ax4.set_ylim(y_min, y_max)
+ax2.set_xlabel(f'Component 1', fontsize=LABELSIZE, labelpad=LABELPAD)
+ax2.set_ylabel(f'Component 2', fontsize=LABELSIZE, labelpad=LABELPAD)
+ax2.tick_params(labelbottom=False, labelleft=False, length=0)
+ax2.legend(fontsize=LABELSIZE-1, loc='upper right', markerscale=3)
+ax2.set_xlim(x_min, x_max)
+ax2.set_ylim(y_min, y_max)
 
 # Add subplot label
-ax4.text(-0.03, 1.1, f'{subplot_labels_2x2[3]}', transform=ax4.transAxes, 
+ax2.text(-0.03, 1.1, f'{subplot_labels[1]}', transform=ax2.transAxes, 
          fontsize=FONTSIZE+2, fontweight='bold', ha='right', va='top')
 
 # Adjust layout manually instead of tight_layout to avoid spacing issues
 # plt.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.1, hspace=0.3, wspace=0.3)
 plt.tight_layout()
-plt.savefig('figures/combined_analysis_2x2.pdf', dpi=DPI, bbox_inches='tight', pad_inches=0)
-plt.savefig('figures/combined_analysis_2x2.svg', bbox_inches='tight', pad_inches=0)
+plt.savefig('figures/clustering.pdf', dpi=DPI, bbox_inches='tight', pad_inches=0)
+plt.savefig('figures/clustering.svg', bbox_inches='tight', pad_inches=0)
+
+# Save rasterized version
+for ax in axes.flat:
+    ax.set_rasterized(True)
+plt.savefig('figures/clustering_rasterized.pdf', dpi=DPI, bbox_inches='tight', pad_inches=0)
+for ax in axes.flat:
+    ax.set_rasterized(False)
 
 plt.show()
 
 ax = plt.gca()
 print(ax.get_position())
-print(fig.get_size_inches()*2.54)
 
 # Calculate and display the ARI between true labels and GMM clustering
 gmm_ari = adjusted_rand_score(df['numerical_strength'].values, gmm_cluster_labels)
 print(f"\nGMM Clustering Performance:")
 print(f"Adjusted Rand Index (ARI): {gmm_ari:.3f}")
 print(f"Best hyperparameters: covariance_type='spherical', max_iter=100, tol=0.001")
-
-
-# In[ ]:
-
-
-
 
 
 # In[ ]:
