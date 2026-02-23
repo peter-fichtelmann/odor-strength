@@ -358,9 +358,12 @@ class RandomForestPredictor(PredictorBase):
         self.model = RandomForestClassifierPredictor(**kwargs) if objective == 'classification' else RandomForestRegressorPredictor(**kwargs)
     
     def fit(self, X: np.ndarray, y: np.ndarray, X_val:np.ndarray|None=None, y_val:np.ndarray|None=None, **kwargs):
+        # ensure that the input data is within the range of float32 to prevent overflow in RandomForestRegressor
+        X = np.clip(X, -3.4e38, 3.4e38, dtype=np.float32)
         self.model.fit(X, y, X_val=X_val, y_val=y_val, **kwargs)
 
     def predict(self, X: np.ndarray) -> np.ndarray:
+        X = np.clip(X, -3.4e38, 3.4e38, dtype=np.float32)
         return self.model.predict(X)
     
     def save(self, path: str):
@@ -416,6 +419,8 @@ class XGBoostPredictor(PredictorBase):
         self.model = None
 
     def fit(self, X: np.ndarray, y: np.ndarray, X_val:np.ndarray|None = None, y_val:np.ndarray|None = None, **kwargs) -> int:
+        # ensure that the input data is within the range of float32 to prevent overflow in XGBoost
+        X = np.clip(X, -3.4e38, 3.4e38, dtype=np.float32)
         params = self.kwargs.copy()
         additional_model_kwargs = kwargs
         if self.binarize_labels:
@@ -433,6 +438,7 @@ class XGBoostPredictor(PredictorBase):
             custom_metric_name = 'mse_macro'
             additional_model_kwargs['custom_metric'] = self.mse_macro
         if isinstance(X_val, np.ndarray) and isinstance(y_val, np.ndarray):
+            X_val = np.clip(X_val, -3.4e38, 3.4e38, dtype=np.float32)
             if self.binarize_labels:
                 y_val = self.label_binarizer.binarize_labels(y_val)
             dval = xgb.DMatrix(X_val, label=y_val)
@@ -468,6 +474,7 @@ class XGBoostPredictor(PredictorBase):
         #         self.model = self.model[0:self.model.best_iteration + 1] # alternative iteration range in prediction
         
     def predict(self, X: np.ndarray) -> np.ndarray:
+        X = np.clip(X, -3.4e38, 3.4e38, dtype=np.float32)
         if self.binarize_labels:
             predictions = self.model.predict(xgb.DMatrix(X), iteration_range=(0, self.model.best_iteration + 1 if hasattr(self.model, 'best_iteration') else 0))
             if predictions.shape[0] != X.shape[0]:
