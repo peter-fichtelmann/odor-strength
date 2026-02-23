@@ -11,13 +11,16 @@
 # 4. **Feature Importance**: SHAP analysis to understand model predictions
 # 5. **External Validation**: Testing on independent Keller 2016 dataset
 
-# In[1]:
+# In[ ]:
+
+
+# In[ ]:
 
 
 # tested with python==3.12.2
 
 
-# In[2]:
+# In[ ]:
 
 
 import pandas as pd
@@ -27,7 +30,7 @@ import pandas as pd
 
 # Run the notebook dataset_curation.ipynb or python script dataset_curation.py first
 
-# In[32]:
+# In[ ]:
 
 
 df_odor_strength = pd.read_csv('data/df_odor_strength.csv')
@@ -40,7 +43,7 @@ groups = pd.read_csv('data/odor_strength_groups.csv', index_col=0).values.flatte
 
 # ## Model Training with Hyperparameter optimization
 
-# In[4]:
+# In[ ]:
 
 
 from typing import Callable, Any
@@ -64,12 +67,20 @@ from utility.stratified_group_split import stratified_group_train_test_split
 
 hyperparameter_spaces = HyperparameterSpaces()
 
-STORAGE_FOLDER = 'sqlite:///hyperparameter_optimization/hp_opt_dbs/'
-if not os.path.exists('hyperparameter_optimization/hp_opt_dbs/'):
-    os.makedirs('hyperparameter_optimization/hp_opt_dbs/')
+# STORAGE_FOLDER = 'sqlite:///hyperparameter_optimization/hp_opt_dbs/'
+from pathlib import Path
+
+BASE_DIR = Path.cwd()  # or set to your project root explicitly
+STORAGE_DIR = BASE_DIR / "hyperparameter_optimization" / "hp_opt_dbs"
+STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+
+STORAGE_FOLDER = f"sqlite:///{STORAGE_DIR.as_posix()}/"
+print('Storage folder for loading studies:', STORAGE_FOLDER)
+# if not os.path.exists('hyperparameter_optimization/hp_opt_dbs/'):
+#     os.makedirs('hyperparameter_optimization/hp_opt_dbs/')
 
 
-# In[5]:
+# In[ ]:
 
 
 X = df_odor_strength['canonical_smiles'].values
@@ -98,7 +109,7 @@ odor_strength_module.evaluate_kFold(X_train, y_train, groups=groups_train, n_spl
 
 N_REPEATS = 10
 N_FOLDS = 10
-N_TRIALS = 1
+N_TRIALS = 100
 LIMIT = 100
 
 callback = MaxTrialsCallback(
@@ -382,8 +393,8 @@ def optimize_hyperparameters_indirect_approach_first_step(encoder: object, predi
                     X=X_train,
                     y=y_train,
                     direction='maximize',
-                    study_name=f'{encoder.__name__}_{predictor.__name__}_indirect_first_step',
-                    storage_path=STORAGE_FOLDER + f'{encoder.__name__}_{predictor.__name__}_indirect_first_step.db',
+                    study_name=f'{encoder.__name__}_{predictor.__name__}_indirect_1',
+                    storage_path=STORAGE_FOLDER + f'{encoder.__name__}_{predictor.__name__}_indirect_1.db',
                     pruner=optuna.pruners.PercentilePruner(25, n_startup_trials=3),
                     pruner_tolerance=0.015,
                     n_repeats=N_REPEATS,
@@ -430,8 +441,8 @@ def optimize_hyperparameters_indirect_approach_second_step(encoder: object, pred
                     X=X_train,
                     y=y_train,
                     direction='minimize',
-                    study_name=f'{encoder.__name__}_{predictor.__name__}_indirect_second_step',
-                    storage_path=STORAGE_FOLDER + f'{encoder.__name__}_{predictor.__name__}_indirect_second_step.db',
+                    study_name=f'{encoder.__name__}_{predictor.__name__}_indirect_2',
+                    storage_path=STORAGE_FOLDER + f'{encoder.__name__}_{predictor.__name__}_indirect_2.db',
                     pruner=optuna.pruners.PercentilePruner(25, n_startup_trials=3),
                     pruner_tolerance=0.02,
                     n_repeats=N_REPEATS,
@@ -448,9 +459,9 @@ for encoder in encoders:
 print('Hyperparameter optimization completed for all combinations of encoders and predictors.')
 
 
-# ## Best-Performing Model Training and Evaluation
+# ## Model Evaluation
 
-# In[7]:
+# In[ ]:
 
 
 from typing import Tuple
@@ -468,14 +479,11 @@ from hyperparameter_optimization.hyperparameter_optimizer import HyperparameterO
 from models.odor_strength_module import OdorStrengthModule, OdorStrengthModuleHyperparameterOptimizationWrapper
 
 
-
 DPI = 600
 FONTSIZE = 8
-LABELSIZE = 5
-LABELPAD = 3
+LABELSIZE = 7
+LABELPAD = 4
 FIGURE_WIDTH = 8.3 / 2.54
-
-STORAGE_FOLDER = 'sqlite:///hyperparameter_optimization/hp_opt_dbs/'
 
 encoders = [
     NativeEncoder,
@@ -508,7 +516,7 @@ X_test = X_test.tolist()
 # 
 # This section contains functions for evaluating the best-performing models from hyperparameter optimization and generating performance visualizations.
 
-# In[8]:
+# In[ ]:
 
 
 def predict_on_test_set(
@@ -595,6 +603,7 @@ def get_best_model_performances(
     df = pd.DataFrame(columns=encoder_name_list, index=predictor_name_list)
     models = {}
     hyperparameters = {}
+    print('Storage folder for loading studies:', STORAGE_FOLDER)
     for encoder in encoders:
         for predictor in predictors:
             study_name=f'{encoder.__name__}_{predictor.__name__}_' + study_name_suffix
@@ -661,7 +670,7 @@ def get_best_model_performances(
     col_label = df.columns[best_position[1]]
     best_model = models[col_label][row_label]
     best_hyperparameters = hyperparameters[col_label][row_label]
-    return df, best_model, best_hyperparameters
+    return df, best_model, best_hyperparameters, hyperparameters, models
 
 
 encoders = [
@@ -684,6 +693,7 @@ predictors = [
     ChemeleonPredictor,
     ]
 
+
 y_train_has_odor = y_train.copy()
 y_train_has_odor[y_train_has_odor>0] = 1
 y_test_has_odor = y_test.copy()
@@ -693,37 +703,527 @@ y_train_wo_odorless = y_train.copy()[np.array(y_train)>0]
 X_test_wo_odorless = np.array(X_test)[np.array(y_test)>0].tolist()
 y_test_wo_odorless = y_test.copy()[np.array(y_test)>0]
 
-df_direct, best_model_direct_class, best_hyperparameters_direct = get_best_model_performances(
+df_direct, best_model_direct_class, best_hyperparameters_direct, hyperparameters_direct, models_direct = get_best_model_performances(
     encoders,
     predictors,
-    'direct',
-    'direct',
+    # 'direct',
+    'odor_strength_w_odorless',
+    'odor_strength_w_odorless',
+    # 'direct',
     direction='minimize',
     metric=Metrics().calculate_mse_macro,
     X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test,
-    save_path_addition='direct'
+    save_path_addition='direct',
+    repeats=N_REPEATS
     )
-df_indirect_1, best_model_indirect_first_step_class, best_hyperparameters_indirect_first_step = get_best_model_performances(
+df_indirect_1, best_model_indirect_first_step_class, best_hyperparameters_indirect_first_step, hyperparameters_first_step, models_first_step = get_best_model_performances(
     encoders,
     predictors,
-    'indirect_first_step',
-    'indirect_first_step',
+    # 'indirect_1',
+    'has_odor',
+    'has_odor',
+    # 'indirect_1',
     direction='maximize',
     metric=Metrics().calculate_f1_score,
     X_train=X_train, y_train=y_train_has_odor, X_test=X_test, y_test=y_test_has_odor,
-    save_path_addition='indirect_1'
+    save_path_addition='indirect_1',
+    repeats=N_REPEATS
     )
-df_indirect_2, best_model_indirect_second_step_class, best_hyperparameters_indirect_second_step = get_best_model_performances(
+df_indirect_2, best_model_indirect_second_step_class, best_hyperparameters_indirect_second_step, hyperparameters_second_step, models_second_step = get_best_model_performances(
     encoders,
     predictors, 
-    'indirect_second_step',
-    'indirect_second_step',
+    # 'indirect_2',
+    'odor_strength_wo_odorless',
+    'odor_strength_wo_odorless',
+    # 'indirect_2',
      direction='minimize',
      metric=Metrics().calculate_mse_macro,
      X_train=X_train_wo_odorless, y_train=y_train_wo_odorless, X_test=X_test_wo_odorless, y_test=y_test_wo_odorless,
      save_path_addition='indirect_2',
-     additional_test_set=(X_test, y_test)
+     additional_test_set=(X_test, y_test),
+     repeats=N_REPEATS
      )
+
+
+# ### Metrics Table Per Model Combination
+
+# In[ ]:
+
+
+metrics = Metrics()
+
+encoder_old_names = [
+    'RDKitDescriptors',
+    'MorganFp',
+    'RDKitFp',
+    'TopologicalTorsionFp',
+    'AtomPairFp',
+    'MACCSKeysFp',
+    'ChemBerta',
+    'NativeEncoder'
+]
+encoder_new_names = [
+    'RDKit Descriptors',
+    'Morgan FP',
+    'RDKit FP',
+    'Topological Torsion FP',
+    'Atom Pair FP',
+    'MACCCS Keys FP',
+    'ChemBERTa',
+    'None'
+]
+predictor_old_names = [
+    'LogisticRegressionPredictor',
+    'RandomForestPredictor',
+    'XGBoostPredictor',
+    'MLP_Predictor',
+    'CoralPredictor',
+    'ChemPropMPNNPredictor',
+    'ChemeleonPredictor'
+
+]
+predictor_new_names = [
+    'Logistic Regression',
+    'Random Forest',
+    'XGBoost',
+    'MLP',
+    'CORAL',
+    'ChemProp',
+    'CheMeleon'
+]
+abbreviation_dict = {
+    **dict(zip(encoder_old_names, encoder_new_names)),
+    **dict(zip(predictor_old_names, predictor_new_names)),
+}
+
+def evaluate_prediction_df(df_pred: pd.DataFrame, y_test: np.ndarray) -> dict[str, float]:
+    if df_pred is None or len(df_pred) == 0:
+        return {}
+    repeats = len(df_pred) // len(y_test) if len(y_test) > 0 else 1
+    repeats = max(1, repeats)
+    values = []
+    for i in range(repeats):
+        df_pred_subset = df_pred.iloc[i*len(y_test):(i+1)*len(y_test)]
+        y_true = df_pred_subset['y_test'].values
+        y_pred = df_pred_subset['preds'].values
+        metrics_row = {
+            'MSE macro': metrics.calculate_mse_macro(y_true, y_pred)[0],
+            'MSE micro': metrics.calculate_mse(y_true, y_pred),
+            'F1 macro': metrics.calculate_f1_macro(y_true, y_pred)[0],
+            # 'f1_micro': metrics.calculate_f1_micro(y_true, y_pred),
+            'Accuracy/F1 micro': metrics.calculate_accuracy(y_true, y_pred),
+            'ROC AUC': metrics.calculate_roc_auc(y_true, y_pred)[0],
+        }
+        values.append(metrics_row)
+    df_values = pd.DataFrame(values)
+    return df_values.mean().to_dict()
+
+def build_metrics_table(preds_path_template: str, y_test: np.ndarray) -> pd.DataFrame:
+    metrics_rows = []
+    for encoder in encoders:
+        for predictor in predictors:
+            preds_path = preds_path_template.format(
+                encoder=encoder.__name__,
+                predictor=predictor.__name__,
+            )
+            if not os.path.exists(preds_path):
+                continue
+            df_pred = pd.read_csv(preds_path, index_col=0)
+            metrics_result = evaluate_prediction_df(df_pred, y_test)
+            if not metrics_result:
+                continue
+            metrics_rows.append({
+                'encoder': encoder.__name__,
+                'predictor': predictor.__name__,
+                **metrics_result
+            })
+    df_metrics = pd.DataFrame(metrics_rows)
+    if df_metrics.empty:
+        return df_metrics
+    df_metrics = df_metrics.sort_values(['encoder', 'predictor']).reset_index(drop=True)
+    df_metrics['encoder'] = df_metrics['encoder'].map(abbreviation_dict).fillna(df_metrics['encoder'])
+    df_metrics['predictor'] = df_metrics['predictor'].map(abbreviation_dict).fillna(df_metrics['predictor'])
+    df_metrics.rename(columns={'encoder': 'Descriptor', 'predictor': 'Predictor'}, inplace=True)
+    return df_metrics
+
+def build_metrics_table_combined(
+    preds_path_step1_template: str,
+    preds_path_step2_template: str,
+    y_test: np.ndarray,
+    decision_threshold: float = 0.5,
+) -> pd.DataFrame:
+    metrics_rows = []
+    for encoder in encoders:
+        for predictor in predictors:
+            preds_path_1 = preds_path_step1_template.format(
+                encoder=encoder.__name__,
+                predictor=predictor.__name__,
+            )
+            preds_path_2 = preds_path_step2_template.format(
+                encoder=encoder.__name__,
+                predictor=predictor.__name__,
+            )
+            if not os.path.exists(preds_path_1) or not os.path.exists(preds_path_2):
+                continue
+            df_pred_1 = pd.read_csv(preds_path_1, index_col=0)
+            df_pred_2 = pd.read_csv(preds_path_2, index_col=0)
+            if len(df_pred_1) != len(df_pred_2):
+                continue
+            df_pred_combined = df_pred_2.copy()
+            df_pred_combined.loc[df_pred_1['preds'] < decision_threshold, 'preds'] = df_pred_1.loc[df_pred_1['preds'] < decision_threshold, 'preds']
+            metrics_result = evaluate_prediction_df(df_pred_combined, y_test)
+            if not metrics_result:
+                continue
+            metrics_rows.append({
+                'encoder': encoder.__name__,
+                'predictor': predictor.__name__,
+                **metrics_result
+            })
+    df_metrics = pd.DataFrame(metrics_rows)
+    if df_metrics.empty:
+        return df_metrics
+    df_metrics = df_metrics.sort_values(['encoder', 'predictor']).reset_index(drop=True)
+    df_metrics['encoder'] = df_metrics['encoder'].map(abbreviation_dict).fillna(df_metrics['encoder'])
+    df_metrics['predictor'] = df_metrics['predictor'].map(abbreviation_dict).fillna(df_metrics['predictor'])
+    df_metrics.rename(columns={'encoder': 'Descriptor', 'predictor': 'Predictor'}, inplace=True)
+    return df_metrics
+
+df_metrics_direct = build_metrics_table(
+    'test_predictions/direct{encoder}{predictor}_predictions.csv',
+    y_test,
+ )
+df_metrics_indirect_1 = build_metrics_table(
+    'test_predictions/indirect_1{encoder}{predictor}_predictions.csv',
+    y_test_has_odor,
+ )
+df_metrics_indirect_2 = build_metrics_table(
+    'test_predictions/indirect_2{encoder}{predictor}_predictions_additional.csv',
+    y_test,
+ )
+df_metrics_indirect_combined = build_metrics_table_combined(
+    'test_predictions/indirect_1{encoder}{predictor}_predictions.csv',
+    'test_predictions/indirect_2{encoder}{predictor}_predictions_additional.csv',
+    y_test,
+ )
+
+
+# In[ ]:
+
+
+print(df_metrics_direct.to_latex(index=False, float_format="%.2f"))
+
+
+# In[ ]:
+
+
+print(df_metrics_indirect_combined.to_latex(index=False, float_format="%.2f"))
+
+
+# ### Paired t-tests
+
+# In[ ]:
+
+
+from scipy import stats
+
+class Scorer:
+    def __init__(self, metric: Callable[[np.ndarray, np.ndarray], float]):
+        self.metric = metric
+
+    def __call__(self, estimator, X, y):
+        preds = estimator.predict(X)
+        score = self.metric(y, preds)
+        if isinstance(score, (list, tuple)):
+            score = score[0]
+        return score
+
+def paired_ttest_5x2cv(estimator1, estimator2, X, y, scorer, groups, random_seed=None):
+    """
+    Implements the 5x2cv paired t test proposed
+    by Dieterrich (1998)
+    to compare the performance of two models.
+    
+    This is an adaption of the implementation provided by mlxtend:
+    https://rasbt.github.io/mlxtend/user_guide/evaluate/paired_ttest
+
+    Parameters
+    ----------
+
+    """
+    rng = np.random.RandomState(random_seed)
+
+    # if scoring is None:
+    #     est_type = _infer_estimator_type(estimator1)
+    #     if est_type == "classifier":
+    #         scoring = "accuracy"
+    #     elif est_type == "regressor":
+    #         scoring = "r2"
+    #     else:
+    #         raise AttributeError("Estimator must be a Classifier or Regressor.")
+    # if isinstance(scoring, str):
+    #     scorer = get_scorer(scoring)
+    # else:
+    #     scorer = scoring
+    variance_sum = 0.0
+    first_diff = None
+
+    def score_diff(X_1, X_2, y_1, y_2):
+        estimator1.fit(X_1, y_1)
+        estimator2.fit(X_1, y_1)
+        est1_score = scorer(estimator1, X_2, y_2)
+        est2_score = scorer(estimator2, X_2, y_2)
+        score_diff = est1_score - est2_score
+        return score_diff
+
+    for i in range(5):
+        X_1, X_2, y_1, y_2, _, _ = stratified_group_train_test_split(X, y, groups, test_size=0.5, random_state=random_seed)
+        score_diff_1 = score_diff(X_1, X_2, y_1, y_2)
+        score_diff_2 = score_diff(X_2, X_1, y_2, y_1)
+        score_mean = (score_diff_1 + score_diff_2) / 2.0
+        print('score_mean', score_mean)
+        score_var = (score_diff_1 - score_mean) ** 2 + (score_diff_2 - score_mean) ** 2
+        print('score_var', score_var)
+        variance_sum += score_var
+        if first_diff is None:
+            first_diff = score_diff_1
+            print('first_diff', first_diff)
+
+    numerator = first_diff
+    denominator = np.sqrt(1 / 5.0 * variance_sum)
+    t_stat = numerator / denominator
+
+    pvalue = stats.t.sf(np.abs(t_stat), 5) * 2.0
+    return float(t_stat), float(pvalue)
+
+
+# In[ ]:
+
+
+class IndirectOdorStrengthPredictor:
+    def __init__(self, odor_detection_model, odor_strength_model):
+        self.odor_detection_model = odor_detection_model
+        self.odor_strength_model = odor_strength_model
+
+    def fit(self, X, y):
+        y_has_odor = y.copy()
+        y_has_odor[y_has_odor>0] = 1
+        self.odor_detection_model.fit(X, y_has_odor)
+        X_wo_odorless = np.array(X)[np.array(y)>0].tolist()
+        y_wo_odorless = y.copy()[np.array(y)>0]
+        self.odor_strength_model.fit(X_wo_odorless, y_wo_odorless)
+
+    def predict(self, X):
+        has_odor_preds = self.odor_detection_model.predict(X)
+        strength_preds = self.odor_strength_model.predict(X)
+        final_preds = []
+        for has_odor_pred, strength_pred in zip(has_odor_preds, strength_preds):
+            if has_odor_pred == 0:
+                final_preds.append(0)
+            else:
+                final_preds.append(strength_pred)
+        return np.array(final_preds)
+
+
+# In[ ]:
+
+
+if os.path.exists('paired_ttests/direct_vs_indirect_paired_ttest_results.csv'):
+    df_results = pd.read_csv('paired_ttests/direct_vs_indirect_paired_ttest_results.csv')
+else:
+    # loop over all encoder-predictor combinations and perform paired t-test between direct and indirect approach
+    results = []
+    scorer = Scorer(Metrics().calculate_mse_macro)
+    for encoder in encoders:
+        for predictor in predictors:
+            try:
+                print('encoder', encoder.__name__, 'predictor', predictor.__name__)
+                # create model encoder and predictors and combine to model
+                t_stat, p_value = paired_ttest_5x2cv(
+                    estimator1=models_direct[encoder.__name__][predictor.__name__](**hyperparameters_direct[encoder.__name__][predictor.__name__]),
+                    estimator2=IndirectOdorStrengthPredictor(
+                        odor_detection_model=models_first_step[encoder.__name__][predictor.__name__](**hyperparameters_first_step[encoder.__name__][predictor.__name__]),
+                        odor_strength_model=models_second_step[encoder.__name__][predictor.__name__](**hyperparameters_second_step[encoder.__name__][predictor.__name__])
+                    ),
+                    X=np.array(X_test),
+                    y=y_test,
+                    scorer=scorer,
+                    groups=groups_test,
+                    random_seed=0
+                )
+                results.append({
+                    'encoder': encoder.__name__,
+                    'predictor': predictor.__name__,
+                    't_statistic': t_stat,
+                    'p_value': p_value
+                })
+            except Exception as e:
+                print(f'Error processing {encoder.__name__} with {predictor.__name__}: {e}')
+    df_results = pd.DataFrame(results)
+    if not os.path.isdir('paired_ttests'):
+        os.makedirs('paired_ttests/')
+    df_results.to_csv('paired_ttests/direct_vs_indirect_paired_ttest_results.csv', index=False)
+
+
+# In[ ]:
+
+
+df_results.rename(columns={'encoder': 'Descriptor', 'predictor': 'Predictor', 't_stat': 't value', 'p_value': 'p value'}, inplace=True)
+df_results['Descriptor'] = df_results['Descriptor'].map(abbreviation_dict).fillna(df_results['Descriptor'])
+df_results['Predictor'] = df_results['Predictor'].map(abbreviation_dict).fillna(df_results['Predictor'])
+print(df_results.to_latex(index=False, float_format="%.2f"))
+
+
+# In[ ]:
+
+
+# Pairwise 5x2cv t-tests among the four top-performing direct models (lowest Macro MSE in df_direct)
+df_direct_long = (
+    df_direct.stack()
+    .reset_index()
+    .rename(columns={'level_0': 'predictor', 'level_1': 'encoder', 0: 'score'})
+)
+df_direct_long = df_direct_long.dropna(subset=['score']).sort_values('score', ascending=True).reset_index(drop=True)
+
+top4_direct = df_direct_long.head(4).copy()
+top4_direct['rank'] = np.arange(1, len(top4_direct) + 1)
+print(top4_direct[['rank', 'encoder', 'predictor', 'score']])
+
+# Recreate the canonical split to avoid mutated kernel variables (e.g., y_test stacked in later cells)
+X_all = df_odor_strength['canonical_smiles'].values
+y_all = df_odor_strength['numerical_strength'].values
+_, X_pair, _, y_pair, _, groups_pair = stratified_group_train_test_split(
+    X_all, y_all, groups, random_state=42
+)
+X_pair = np.array(X_pair)
+y_pair = np.array(y_pair)
+groups_pair = np.array(groups_pair)
+
+def align_predictions_with_targets(preds: np.ndarray, y_true: np.ndarray) -> np.ndarray:
+    preds = np.asarray(preds).reshape(-1)
+    y_true = np.asarray(y_true).reshape(-1)
+    if preds.shape[0] == y_true.shape[0]:
+        return preds
+    if preds.shape[0] % y_true.shape[0] == 0:
+        repeats = preds.shape[0] // y_true.shape[0]
+        preds = preds.reshape(repeats, y_true.shape[0]).mean(axis=0)
+        return preds
+    raise ValueError(
+        f'Incompatible prediction/target lengths: preds={preds.shape[0]}, y={y_true.shape[0]}'
+    )
+
+class RobustScorer:
+    def __init__(self, metric: Callable[[np.ndarray, np.ndarray], float]):
+        self.metric = metric
+
+    def __call__(self, estimator, X, y):
+        preds = estimator.predict(X)
+        preds = align_predictions_with_targets(preds, y)
+        score = self.metric(y, preds)
+        if isinstance(score, (list, tuple)):
+            score = score[0]
+        return score
+
+results_pairwise = []
+scorer = RobustScorer(Metrics().calculate_mse_macro)
+
+for i in range(len(top4_direct)):
+    for j in range(i + 1, len(top4_direct)):
+        row_i = top4_direct.iloc[i]
+        row_j = top4_direct.iloc[j]
+
+        encoder_i, predictor_i = row_i['encoder'], row_i['predictor']
+        encoder_j, predictor_j = row_j['encoder'], row_j['predictor']
+
+        print(f"Comparing ({i+1}) {encoder_i} + {predictor_i} vs ({j+1}) {encoder_j} + {predictor_j}")
+        try:
+            estimator_i = models_direct[encoder_i][predictor_i](**hyperparameters_direct[encoder_i][predictor_i])
+            estimator_j = models_direct[encoder_j][predictor_j](**hyperparameters_direct[encoder_j][predictor_j])
+
+            t_stat, p_value = paired_ttest_5x2cv(
+                estimator1=estimator_i,
+                estimator2=estimator_j,
+                X=X_pair,
+                y=y_pair,
+                scorer=scorer,
+                groups=groups_pair,
+                random_seed=0,
+            )
+
+            results_pairwise.append({
+                'model_a_rank': int(row_i['rank']),
+                'model_a_encoder': encoder_i,
+                'model_a_predictor': predictor_i,
+                'model_a_score': float(row_i['score']),
+                'model_b_rank': int(row_j['rank']),
+                'model_b_encoder': encoder_j,
+                'model_b_predictor': predictor_j,
+                'model_b_score': float(row_j['score']),
+                't_statistic': float(t_stat),
+                'p_value': float(p_value),
+            })
+        except Exception as e:
+            print(f"Error comparing {encoder_i}/{predictor_i} vs {encoder_j}/{predictor_j}: {e}")
+
+df_pairwise_ttests_top4_direct = pd.DataFrame(results_pairwise)
+
+if not os.path.isdir('paired_ttests'):
+    os.makedirs('paired_ttests/')
+
+save_path = 'paired_ttests/top4_direct_pairwise_5x2cv_ttests.csv'
+df_pairwise_ttests_top4_direct.to_csv(save_path, index=False)
+print(f'Saved pairwise 5x2cv results to: {save_path}')
+
+df_pairwise_ttests_top4_direct
+
+
+# In[ ]:
+
+
+# P-value matrix: rows = encoder/predictor A, columns = encoder/predictor B (mapped with abbreviation_dict)
+df_pairwise = df_pairwise_ttests_top4_direct.copy()
+
+
+def map_model_name(encoder_name: str, predictor_name: str) -> str:
+    encoder_mapped = abbreviation_dict.get(encoder_name, encoder_name)
+    predictor_mapped = abbreviation_dict.get(predictor_name, predictor_name)
+    return f"{encoder_mapped} | {predictor_mapped}"
+
+df_pairwise['model_a'] = df_pairwise.apply(
+    lambda row: map_model_name(row['model_a_encoder'], row['model_a_predictor']),
+    axis=1,
+    )
+df_pairwise['model_b'] = df_pairwise.apply(
+    lambda row: map_model_name(row['model_b_encoder'], row['model_b_predictor']),
+    axis=1,
+    )
+
+# Keep ordering by rank from top4_direct and map names
+ordered_models = [
+    map_model_name(row['encoder'], row['predictor'])
+    for _, row in top4_direct.iterrows()
+    ]
+
+# Upper-triangular pivot
+df_pvalues_top4_direct = df_pairwise.pivot(index='model_a', columns='model_b', values='p_value')
+
+# Reindex for consistent model order
+df_pvalues_top4_direct = df_pvalues_top4_direct.reindex(index=ordered_models, columns=ordered_models)
+
+# Fill diagonal and mirror lower triangle for a full symmetric matrix
+for model_name in ordered_models:
+    df_pvalues_top4_direct.loc[model_name, model_name] = np.nan
+for i, row_name in enumerate(ordered_models):
+    for j, col_name in enumerate(ordered_models):
+        if i > j and pd.isna(df_pvalues_top4_direct.loc[row_name, col_name]):
+            df_pvalues_top4_direct.loc[row_name, col_name] = df_pvalues_top4_direct.loc[col_name, row_name]
+
+df_pvalues_top4_direct
+
+
+# In[ ]:
+
+
+print(df_pvalues_top4_direct.to_latex(float_format="%.2f", na_rep="--"))
 
 
 # ### Indirect Approach: Combining Two-Step Predictions
@@ -732,11 +1232,15 @@ df_indirect_2, best_model_indirect_second_step_class, best_hyperparameters_indir
 # 1. First model predicts if a molecule has any odor (binary classification)
 # 2. Second model predicts odor strength for molecules classified as odorous (regression)
 
-# In[9]:
+# In[ ]:
 
 
-repeats = 10
-y_test_stack = np.hstack([y_test]*repeats)
+y_test_stack = np.hstack([y_test]*N_REPEATS)
+
+
+# In[ ]:
+
+
 save_path_addition_1 = 'indirect_1'
 save_path_addition_2 = 'indirect_2'
 mse_macros = {encoder.__name__: {} for encoder in encoders}
@@ -755,23 +1259,38 @@ for encoder in encoders:
 df_odor_strength_indirect = pd.DataFrame(mse_macros)
 
 
-# In[10]:
-
-
-df_odor_strength_indirect
-
-
 # ### Heatmap Visualization
 # 
 
-# In[11]:
+# In[ ]:
 
 
-from typing import Tuple
+from typing import Mapping, Tuple
 DPI = 600
 colors = [okabe_ito[1], okabe_ito[3]]
 mycmap = LinearSegmentedColormap.from_list("mycmap", colors, N=256)
 width_factor = np.sqrt(2.45/2.2)
+
+encoder_label_map = {
+    'NativeEncoder': 'None',
+    'RDKitDescriptors': 'RDKit Descriptors',
+    'MorganFp': 'Morgan FP',
+    'RDKitFp': 'RDKit FP',
+    'TopologicalTorsionFp': 'Topological Torsion FP',
+    'AtomPairFp': 'Atom Pair FP',
+    'MACCSKeysFp': 'MACCCS Keys FP',
+    'ChemBerta': 'ChemBERTa',
+}
+
+predictor_label_map = {
+    'LogisticRegressionPredictor': 'Logistic Regression',
+    'RandomForestPredictor': 'Random Forest',
+    'XGBoostPredictor': 'XGBoost',
+    'MLP_Predictor': 'MLP',
+    'CoralPredictor': 'CORAL',
+    'ChemPropMPNNPredictor': 'ChemProp',
+    'ChemeleonPredictor': 'CheMeleon',
+}
 
 
 def plot_heatmap(
@@ -783,15 +1302,15 @@ def plot_heatmap(
         labelpad: int = 10,
         dpi: int = 100,
         save_path: list[str] | None = None,
-        custom_x_ticks: list[str] | None = None,
-        custom_y_ticks: list[str] | None = None,
+        custom_x_tick_mapping: Mapping[str, str] | None = None,
+        custom_y_tick_mapping: Mapping[str, str] | None = None,
 ) -> None:
     """
     Create a performance heatmap for encoder-predictor combinations.
-    
+
     This function visualizes model performance across different combinations of
     molecular encoders and predictors using a color-coded heatmap.
-    
+
     Args:
         df (pd.DataFrame): Performance matrix with predictors as rows and encoders as columns
         colorbar_label (str): Label for the colorbar indicating the performance metric
@@ -801,22 +1320,27 @@ def plot_heatmap(
         labelpad (int): Padding for axis labels
         dpi (int): Resolution for saved figures
         save_path (list[str], optional): List of file paths to save the figure
-        custom_x_ticks (list[str], optional): Custom labels for x-axis (encoders)
-        custom_y_ticks (list[str], optional): Custom labels for y-axis (predictors)
+        custom_x_tick_mapping (Mapping[str, str], optional): Mapping of encoder names to display labels
+        custom_y_tick_mapping (Mapping[str, str], optional): Mapping of predictor names to display labels
     """
     plt.figure(figsize=figsize)
     plt.imshow(df, cmap=mycmap, aspect='auto')
     colorbar = plt.colorbar()
     colorbar.set_label(colorbar_label, fontsize=fontsize, labelpad=labelpad+labelpad*0.2)
     colorbar.ax.tick_params(labelsize=labelsize)
-    # plt.xlabel('Encoders', fontsize=fontsize, labelpad=labelpad)
-    # plt.ylabel('Predictors', fontsize=fontsize, labelpad=labelpad)
-    if custom_x_ticks is None:
-        custom_x_ticks = [label.replace('Encoder', '') for label in df.columns]
-    plt.xticks(ticks=range(len(custom_x_ticks)), labels=custom_x_ticks, rotation=45, ha='right')
-    if custom_y_ticks is None:
-        custom_y_ticks = [label.split('Predictor')[0] for label in df.index]
-    plt.yticks(ticks=range(len(df.index)), labels=custom_y_ticks)
+
+    if custom_x_tick_mapping is None:
+        x_labels = [label.replace('Encoder', '') for label in df.columns]
+    else:
+        x_labels = [custom_x_tick_mapping.get(label, label.replace('Encoder', '')) for label in df.columns]
+
+    if custom_y_tick_mapping is None:
+        y_labels = [label.split('Predictor')[0] for label in df.index]
+    else:
+        y_labels = [custom_y_tick_mapping.get(label, label.split('Predictor')[0]) for label in df.index]
+
+    plt.xticks(ticks=range(len(df.columns)), labels=x_labels, rotation=45, ha='right')
+    plt.yticks(ticks=range(len(df.index)), labels=y_labels)
     plt.tick_params(axis='both', which='major', labelsize=labelsize)
     plt.tight_layout()
     if save_path is not None:
@@ -834,9 +1358,9 @@ plot_heatmap(
     labelsize=LABELSIZE,
     labelpad=LABELPAD,
     save_path=['figures/hp_opt_heatmap_has_odor.pdf'],
-    custom_x_ticks=['RDKit Descriptors', 'Morgan FP', 'RDKit FP', 'Topological Torsion FP', 'Atom Pair FP', 'MACCCS Keys FP', 'ChemBERTa'],
-    custom_y_ticks=['Logistic Regression', 'Random Forest', 'XGBoost', 'MLP']
-    )
+    custom_x_tick_mapping=encoder_label_map,
+    custom_y_tick_mapping=predictor_label_map,
+)
 plot_heatmap(
     - df_indirect_2.dropna(how='all').iloc[:5, 1:],
     colorbar_label='Negative Macro MSE',
@@ -846,9 +1370,9 @@ plot_heatmap(
     labelsize=LABELSIZE,
     labelpad=LABELPAD,
     save_path=['figures/hp_opt_heatmap_wo_odorless.pdf'],
-    custom_x_ticks=['RDKit Descriptors', 'Morgan FP', 'RDKit FP', 'Topological Torsion FP', 'Atom Pair FP', 'MACCCS Keys FP', 'ChemBERTa'],
-    custom_y_ticks=['Logistic Regression', 'Random Forest', 'XGBoost', 'MLP', 'CORAL']
-    )
+    custom_x_tick_mapping=encoder_label_map,
+    custom_y_tick_mapping=predictor_label_map,
+)
 plot_heatmap(
     - df_odor_strength_indirect.dropna(how='all').iloc[2:, 1:],
     colorbar_label='Negative Macro MSE',
@@ -858,10 +1382,10 @@ plot_heatmap(
     labelsize=LABELSIZE,
     labelpad=LABELPAD,
     save_path=['figures/hp_opt_heatmap_indirect.pdf'],
-    custom_x_ticks=['RDKit Descriptors', 'Morgan FP', 'RDKit FP', 'Topological Torsion FP', 'Atom Pair FP', 'MACCCS Keys FP', 'ChemBERTa'],
-    custom_y_ticks=['Logistic Regression', 'Random Forest', 'XGBoost', 'MLP']
-    )
-# 
+    custom_x_tick_mapping=encoder_label_map,
+    custom_y_tick_mapping=predictor_label_map,
+)
+#
 plot_heatmap(
     - df_direct.dropna(how='all').iloc[:5, 1:],
     colorbar_label=' Negative Macro MSE',
@@ -871,8 +1395,8 @@ plot_heatmap(
     labelsize=LABELSIZE,
     labelpad=LABELPAD,
     save_path=['figures/hp_opt_heatmap_w_odorless.pdf'],
-    custom_x_ticks=['RDKit Descriptors', 'Morgan FP', 'RDKit FP', 'Topological Torsion FP', 'Atom Pair FP', 'MACCCS Keys FP', 'ChemBERTa'],
-    custom_y_ticks=['Logistic Regression', 'Random Forest', 'XGBoost', 'MLP', 'CORAL']
+    custom_x_tick_mapping=encoder_label_map,
+    custom_y_tick_mapping=predictor_label_map,
 )
 # difference heatmap
 plot_heatmap(
@@ -884,8 +1408,8 @@ plot_heatmap(
     labelsize=LABELSIZE,
     labelpad=LABELPAD,
     save_path=['figures/hp_opt_heatmap_difference.pdf', 'figures/hp_opt_heatmap_difference.png'],
-    custom_x_ticks=['RDKit Descriptors', 'Morgan FP', 'RDKit FP', 'Topological Torsion FP', 'Atom Pair FP', 'MACCCS Keys FP', 'ChemBERTa'],
-    custom_y_ticks=['Logistic Regression', 'Random Forest', 'XGBoost', 'MLP']
+    custom_x_tick_mapping=encoder_label_map,
+    custom_y_tick_mapping=predictor_label_map,
 )
 
 
@@ -893,10 +1417,65 @@ plot_heatmap(
 # 
 # This section compares the best-performing models from both approaches on the test set to determine which strategy works better for odor strength prediction.
 
-# In[34]:
+# In[ ]:
+from data.molecules.smiles_converter import SmilesCanonicalizer
+
+class Ensemble:
+    def __init__(self, models: list):
+        self.models = models
+        self.smiles_canonicalizer = SmilesCanonicalizer()
+
+    def fit(self, X, y):
+        X = self.smiles_canonicalizer.canonicalize_smiles(X)
+        for model in self.models:
+            model.fit(X, y)
+
+    def predict(self, X):
+        X = self.smiles_canonicalizer.canonicalize_smiles(X)
+        preds = np.array([model.predict(X) for model in self.models])
+        return np.mean(preds, axis=0)
+    
+    def save(self, encoder_paths: list[str], predictor_paths: list[str], predictor_hyperparameters_paths: list[str]):
+        for model, encoder_path, predictor_path, hyperparameters_path in zip(self.models, encoder_paths, predictor_paths, predictor_hyperparameters_paths):
+            model.save(encoder_path, predictor_path, hyperparameters_path)
+
+    def load(self, encoder_paths: list[str], predictor_paths: list[str], predictor_hyperparameters_paths: list[str]):
+        for i, (encoder_path, predictor_path, hyperparameters_path) in enumerate(zip(encoder_paths, predictor_paths, predictor_hyperparameters_paths)):
+            self.models[i].load(encoder_path, predictor_path, hyperparameters_path)
+    
+
+class IndirectEnsemble:
+    def __init__(self, odor_detection_models, odor_strength_models):
+        self.odor_detection_models = odor_detection_models
+        self.odor_strength_models = odor_strength_models
+
+    def fit(self, X, y):
+        y_has_odor = y.copy()
+        y_has_odor[y_has_odor>0] = 1
+        X_wo_odorless = np.array(X)[np.array(y)>0].tolist()
+        y_wo_odorless = y.copy()[np.array(y)>0]
+        for odor_detection_model in self.odor_detection_models:
+            odor_detection_model.fit(X, y_has_odor)
+        for odor_strength_model in self.odor_strength_models:
+            odor_strength_model.fit(X_wo_odorless, y_wo_odorless)
+
+    def predict(self, X):
+        has_odor_preds = [model.predict(X) for model in self.odor_detection_models]
+        has_odor_preds = np.mean(has_odor_preds, axis=0)
+        strength_preds = [model.predict(X) for model in self.odor_strength_models]
+        strength_preds = np.mean(strength_preds, axis=0)
+        final_preds = []
+        for has_odor_pred, strength_pred in zip(has_odor_preds, strength_preds):
+            if has_odor_pred == 0:
+                final_preds.append(0)
+            else:
+                final_preds.append(strength_pred)
+        return np.array(final_preds)
 
 
-repeats = 10
+# In[ ]:
+
+
 preds_list = []
 preds_two_step_list = []
 X = df_odor_strength['canonical_smiles'].values
@@ -907,42 +1486,98 @@ X_train = X_train.tolist()
 X_test = X_test.tolist()
 
 
-for i in range(repeats):
-    model = best_model_direct_class(**best_hyperparameters_direct)
-    model.fit(X_train, y_train)
+direct_model = Ensemble([
+    models_direct['RDKitDescriptors']['RandomForestPredictor'](**hyperparameters_direct['RDKitDescriptors']['RandomForestPredictor']),
+    models_direct['RDKitDescriptors']['XGBoostPredictor'](**hyperparameters_direct['RDKitDescriptors']['XGBoostPredictor']),
+    models_direct['RDKitDescriptors']['MLP_Predictor'](**hyperparameters_direct['RDKitDescriptors']['MLP_Predictor'])
+])
+
+for i in range(N_REPEATS):
+    direct_model.fit(X_train, y_train)
 #     model.save(
 #     encoder_path='encoder.gz',
 #     predictor_path='predictor.pth',
 #     predictor_hyperparameter_path='predictor_hyperparameters.json',
 #     config_path='model_config.txt',
 # )
-    preds = model.predict(X_test)
+    preds = direct_model.predict(X_test)
     preds_list.append(preds)
 
 
-    indirect_first_step_model = best_model_indirect_first_step_class(**best_hyperparameters_indirect_first_step)
-    indirect_second_step_model = best_model_indirect_second_step_class(**best_hyperparameters_indirect_second_step)
+    # indirect_first_step_model = best_model_indirect_first_step_class(**best_hyperparameters_indirect_first_step)
+    # indirect_second_step_model = best_model_indirect_second_step_class(**best_hyperparameters_indirect_second_step)
     
 
-    y_train_has_odor = y_train.copy()
-    y_train_has_odor[y_train_has_odor>0] = 1
-    indirect_first_step_model.fit(X_train, y_train_has_odor)
+    # y_train_has_odor = y_train.copy()
+    # y_train_has_odor[y_train_has_odor>0] = 1
+    # indirect_first_step_model.fit(X_train, y_train_has_odor)
 
-    y_train_wo_odorless = y_train.copy()
-    X_train_wo_odorless = np.array(X_train)[y_train_wo_odorless >= 1].tolist()
-    y_train_wo_odorless = y_train_wo_odorless[y_train_wo_odorless >= 1]
-    indirect_second_step_model.fit(X_train_wo_odorless, y_train_wo_odorless)
+    # y_train_wo_odorless = y_train.copy()
+    # X_train_wo_odorless = np.array(X_train)[y_train_wo_odorless >= 1].tolist()
+    # y_train_wo_odorless = y_train_wo_odorless[y_train_wo_odorless >= 1]
+    # indirect_second_step_model.fit(X_train_wo_odorless, y_train_wo_odorless)
 
-    preds_two_step = indirect_first_step_model.predict(X_test)
-    preds_two_step[preds_two_step>0.5] = indirect_second_step_model.predict(np.array(X_test)[preds_two_step>0.5].tolist())
-    preds_two_step_list.append(preds_two_step)
+    # preds_two_step = indirect_first_step_model.predict(X_test)
+    # preds_two_step[preds_two_step>0.5] = indirect_second_step_model.predict(np.array(X_test)[preds_two_step>0.5].tolist())
+    # preds_two_step_list.append(preds_two_step)
 
 preds = np.hstack(preds_list)
+# preds_two_step = np.hstack(preds_two_step_list)
+y_test_stack = np.hstack([y_test]*N_REPEATS)
+
+
+# In[ ]:
+
+
+preds_two_step_list = []
+X = df_odor_strength['canonical_smiles'].values
+y = df_odor_strength['has_odor'].values
+stratify_data = df_odor_strength['numerical_strength'].values
+X_train, X_test, y_train, y_test, groups_train, groups_test = stratified_group_train_test_split(X, stratify_data, groups, random_state=42)
+X_train = X_train.tolist()
+X_test = X_test.tolist()
+
+
+indirect_model = IndirectEnsemble([
+    models_direct['RDKitDescriptors']['RandomForestPredictor'](**hyperparameters_direct['RDKitDescriptors']['RandomForestPredictor']),
+    models_direct['RDKitDescriptors']['XGBoostPredictor'](**hyperparameters_direct['RDKitDescriptors']['XGBoostPredictor']),
+    models_direct['RDKitDescriptors']['MLP_Predictor'](**hyperparameters_direct['RDKitDescriptors']['MLP_Predictor'])
+])
+
+for i in range(N_REPEATS):
+    indirect_model.fit(X_train, y_train)
+#     model.save(
+#     encoder_path='encoder.gz',
+#     predictor_path='predictor.pth',
+#     predictor_hyperparameter_path='predictor_hyperparameters.json',
+#     config_path='model_config.txt',
+# )
+    preds_two_step = indirect_model.predict(X_test)
+    preds_two_step_list.append(preds_two_step)
+
+
+    # indirect_first_step_model = best_model_indirect_first_step_class(**best_hyperparameters_indirect_first_step)
+    # indirect_second_step_model = best_model_indirect_second_step_class(**best_hyperparameters_indirect_second_step)
+    
+
+    # y_train_has_odor = y_train.copy()
+    # y_train_has_odor[y_train_has_odor>0] = 1
+    # indirect_first_step_model.fit(X_train, y_train_has_odor)
+
+    # y_train_wo_odorless = y_train.copy()
+    # X_train_wo_odorless = np.array(X_train)[y_train_wo_odorless >= 1].tolist()
+    # y_train_wo_odorless = y_train_wo_odorless[y_train_wo_odorless >= 1]
+    # indirect_second_step_model.fit(X_train_wo_odorless, y_train_wo_odorless)
+
+    # preds_two_step = indirect_first_step_model.predict(X_test)
+    # preds_two_step[preds_two_step>0.5] = indirect_second_step_model.predict(np.array(X_test)[preds_two_step>0.5].tolist())
+    # preds_two_step_list.append(preds_two_step)
+
 preds_two_step = np.hstack(preds_two_step_list)
-y_test = np.hstack([y_test]*repeats)
+y_test_stack = np.hstack([y_test]*N_REPEATS)
 
 
-# In[35]:
+# In[ ]:
 
 
 from matplotlib.colors import LinearSegmentedColormap
@@ -1039,16 +1674,35 @@ def plot_confusion_matrix(
 colors = [okabe_ito[1], okabe_ito[3]]
 mycmap = LinearSegmentedColormap.from_list("mycmap", colors, N=256)
 
-print(Metrics().calculate_mse_macro(y_test, preds), Metrics().calculate_mse(y_test, preds))
-samples_per_repeat = int(y_test.shape[0]/repeats)
-mse_macros = [Metrics().calculate_mse_macro(y_test[i*samples_per_repeat:(i+1)*samples_per_repeat], preds[i*samples_per_repeat:(i+1)*samples_per_repeat])[0] for i in range(repeats)]
-print('Standard MSE Macro Deviation per repeat', np.std(mse_macros))
-print(mse_macros)
-print(Metrics().calculate_r2(y_test, preds))
-r2s = [Metrics().calculate_r2(y_test[i*samples_per_repeat:(i+1)*samples_per_repeat], preds[i*samples_per_repeat:(i+1)*samples_per_repeat]) for i in range(repeats)]
-print('Standard R2 Deviation per repeat', np.std(r2s))
+df_metrics_direct_ensemble = pd.Series({
+    'MSE Macro': Metrics().calculate_mse_macro(y_test_stack, preds)[0],
+    'MSE Odorless': Metrics().calculate_mse_macro(y_test_stack, preds)[1][0],
+    'MSE Low': Metrics().calculate_mse_macro(y_test_stack, preds)[1][1],
+    'MSE Medium': Metrics().calculate_mse_macro(y_test_stack, preds)[1][2],
+    'MSE High': Metrics().calculate_mse_macro(y_test_stack, preds)[1][3],
+    'MSE Micro': Metrics().calculate_mse(y_test_stack, preds),
+    'F1 Macro': Metrics().calculate_f1_macro(y_test_stack, preds)[0],
+    'F1 Odorless': Metrics().calculate_f1_macro(y_test_stack, preds)[1][0],
+    'F1 Low': Metrics().calculate_f1_macro(y_test_stack, preds)[1][1],
+    'F1 Medium': Metrics().calculate_f1_macro(y_test_stack, preds)[1][2],
+    'F1 High': Metrics().calculate_f1_macro(y_test_stack, preds)[1][3],
+    'Accuracy/F1 Micro': Metrics().calculate_accuracy(y_test_stack, preds),
+    'ROC AUC': Metrics().calculate_roc_auc(y_test_stack, preds)[0],
+    'ROC AUC Low Threshold': Metrics().calculate_roc_auc(y_test_stack, preds)[1][0],
+    'ROC AUC Medium Threshold': Metrics().calculate_roc_auc(y_test_stack, preds)[1][1],
+    'ROC AUC High Threshold': Metrics().calculate_roc_auc(y_test_stack, preds)[1][2],
+})
+
+# print(Metrics().calculate_mse_macro(y_test, preds), Metrics().calculate_mse(y_test, preds))
+# samples_per_repeat = int(y_test.shape[0]/N_REPEATS)
+# mse_macros = [Metrics().calculate_mse_macro(y_test[i*samples_per_repeat:(i+1)*samples_per_repeat], preds[i*samples_per_repeat:(i+1)*samples_per_repeat])[0] for i in range(N_REPEATS)]
+# print('Standard MSE Macro Deviation per repeat', np.std(mse_macros))
+# print(mse_macros)
+# print(Metrics().calculate_r2(y_test, preds))
+# r2s = [Metrics().calculate_r2(y_test[i*samples_per_repeat:(i+1)*samples_per_repeat], preds[i*samples_per_repeat:(i+1)*samples_per_repeat]) for i in range(N_REPEATS)]
+# print('Standard R2 Deviation per repeat', np.std(r2s))
 plot_confusion_matrix(
-    y_test,
+    y_test_stack,
     preds,
     cmap=mycmap,
     figsize=(FIGURE_WIDTH, 2.45),
@@ -1059,52 +1713,59 @@ plot_confusion_matrix(
     labelpad=LABELPAD,
     )
 
-print(Metrics().calculate_mse_macro(y_test, preds_two_step), Metrics().calculate_mse(y_test, preds_two_step))
-mse_macros_two_step = [Metrics().calculate_mse_macro(y_test[i*samples_per_repeat:(i+1)*samples_per_repeat], preds_two_step[i*samples_per_repeat:(i+1)*samples_per_repeat])[0] for i in range(repeats)]
-print('Standard MSE Macro Deviation per repeat', np.std(mse_macros_two_step))
-print(mse_macros_two_step)
-print(Metrics().calculate_r2(y_test, preds_two_step))
-r2s_two_step = [Metrics().calculate_r2(y_test[i*samples_per_repeat:(i+1)*samples_per_repeat], preds_two_step[i*samples_per_repeat:(i+1)*samples_per_repeat]) for i in range(repeats)]
-print('Standard R2 Deviation per repeat', np.std(r2s_two_step))
-plot_confusion_matrix(
-    y_test,
-    preds_two_step,
-    cmap=mycmap,
-    figsize=(FIGURE_WIDTH, 3),
-    dpi=DPI,
-    text_annotation=False,
-    fontsize=FONTSIZE,
-    labelsize=LABELSIZE,
-    labelpad=LABELPAD,
-)
+# print(Metrics().calculate_mse_macro(y_test, preds_two_step), Metrics().calculate_mse(y_test, preds_two_step))
+# mse_macros_two_step = [Metrics().calculate_mse_macro(y_test[i*samples_per_repeat:(i+1)*samples_per_repeat], preds_two_step[i*samples_per_repeat:(i+1)*samples_per_repeat])[0] for i in range(N_REPEATS)]
+# print('Standard MSE Macro Deviation per repeat', np.std(mse_macros_two_step))
+# print(mse_macros_two_step)
+# print(Metrics().calculate_r2(y_test, preds_two_step))
+# r2s_two_step = [Metrics().calculate_r2(y_test[i*samples_per_repeat:(i+1)*samples_per_repeat], preds_two_step[i*samples_per_repeat:(i+1)*samples_per_repeat]) for i in range(N_REPEATS)]
+# print('Standard R2 Deviation per repeat', np.std(r2s_two_step))
+# plot_confusion_matrix(
+#     y_test_stack,
+#     preds_two_step,
+#     cmap=mycmap,
+#     figsize=(FIGURE_WIDTH, 3),
+#     dpi=DPI,
+#     text_annotation=False,
+#     fontsize=FONTSIZE,
+#     labelsize=LABELSIZE,
+#     labelpad=LABELPAD,
+# )
 
-# difference plot
-colors = [okabe_ito[1], '#808080', okabe_ito[3]]
-mycmap3 = LinearSegmentedColormap.from_list("mycmap", colors, N=256)
-plot_confusion_matrix(
-    y_test,
-    preds,
-    y_pred_2=preds_two_step,
-    cmap=mycmap3,
-    figsize=(FIGURE_WIDTH, 3),
-    dpi=DPI,
-    text_annotation=False,
-    fontsize=FONTSIZE,
-    labelsize=LABELSIZE,
-    labelpad=LABELPAD,
-    center_value=0.0
-)
+# # difference plot
+# colors = [okabe_ito[1], '#808080', okabe_ito[3]]
+# mycmap3 = LinearSegmentedColormap.from_list("mycmap", colors, N=256)
+# plot_confusion_matrix(
+#     y_test_stack,
+#     preds,
+#     y_pred_2=preds_two_step,
+#     cmap=mycmap3,
+#     figsize=(FIGURE_WIDTH, 3),
+#     dpi=DPI,
+#     text_annotation=False,
+#     fontsize=FONTSIZE,
+#     labelsize=LABELSIZE,
+#     labelpad=LABELPAD,
+#     center_value=0.0
+# )
+
+
+# In[ ]:
+
+
+print(df_metrics_direct_ensemble.to_latex(float_format="%.2f"))
 
 
 # ## External Validation on Keller 2016 Dataset
 # 
 # This section validates the best-performing model on an independent dataset from Keller et al. (2016) to assess generalization performance.
 
-# In[36]:
+# In[ ]:
 
 
 from data.data_cleaner import GoodScentsDataCleaner
 import pandas as pd
+import os
 
 cleaned_keller_path = 'data/keller_2016/cleaned_keller_2016.csv'
 if os.path.exists(cleaned_keller_path):
@@ -1122,11 +1783,11 @@ else:
 
 
 keller_2016 = keller_2016[keller_2016['canonical_smiles'].notna()]
-keller_2016['predicted_intensity'] = model.predict(keller_2016['canonical_smiles'].tolist())
+keller_2016['predicted_intensity'] = direct_model.predict(keller_2016['canonical_smiles'].tolist())
 keller_2016['predicted_intensity_rounded'] = keller_2016['predicted_intensity'].round().astype(float)
 
 
-# In[38]:
+# In[ ]:
 
 
 keller_2016_test  = keller_2016[~keller_2016['canonical_smiles'].isin(df_odor_strength['canonical_smiles'])]
@@ -1159,7 +1820,7 @@ def calculate_morgan_tanimoto_similarity(smiles_list_1: list[str], smiles_list_2
 df_morgan_similarities = calculate_morgan_tanimoto_similarity(df_odor_strength['canonical_smiles'].tolist(), keller_2016_test['canonical_smiles'].unique().tolist())
 
 
-# In[39]:
+# In[ ]:
 
 
 smiles_to_remove = df_morgan_similarities[df_morgan_similarities.max(axis=1) > 0.8].index
@@ -1167,7 +1828,7 @@ keller_2016_test = keller_2016_test[~keller_2016_test['canonical_smiles'].isin(s
 keller_2016_test['canonical_smiles'].nunique()
 
 
-# In[40]:
+# In[ ]:
 
 
 keller_2016_test['Odor dilution'] = keller_2016_test['Odor dilution'].map({  
@@ -1178,7 +1839,7 @@ keller_2016_test['Odor dilution'] = keller_2016_test['Odor dilution'].map({
 }).astype(float)
 
 
-# In[41]:
+# In[ ]:
 
 
 from sklearn.metrics import confusion_matrix
@@ -1198,6 +1859,7 @@ def plot_combined_figure_with_violins(
     colorbar_label_2: str,
     tick_labels: dict = {0: "Odorless", 1: "Low", 2: "Medium", 3: "High"},
     text_annotation: bool = True,
+    abbreviation_dict: dict | None = None,
     custom_x_ticks: list[str] | None = None,
     custom_y_ticks: list[str] | None = None,
     figsize: tuple = (15, 18),
@@ -1261,11 +1923,19 @@ def plot_combined_figure_with_violins(
     im1 = ax_heatmap.imshow(df, cmap=cmap)
     
     if custom_x_ticks is None:
-        custom_x_ticks = [label.replace('Encoder', '') for label in df.columns]
+        base_x_ticks = list(df.columns)
+        if abbreviation_dict is not None:
+            custom_x_ticks = [abbreviation_dict.get(label, label) for label in base_x_ticks]
+        else:
+            custom_x_ticks = [label.replace('Encoder', '') for label in base_x_ticks]
     ax_heatmap.set_xticks(range(len(custom_x_ticks)))
     ax_heatmap.set_xticklabels(custom_x_ticks, rotation=45, ha='right')
     if custom_y_ticks is None:
-        custom_y_ticks = [label.split('Predictor')[0] for label in df.index]
+        base_y_ticks = list(df.index)
+        if abbreviation_dict is not None:
+            custom_y_ticks = [abbreviation_dict.get(label, label) for label in base_y_ticks]
+        else:
+            custom_y_ticks = [label.split('Predictor')[0] for label in base_y_ticks]
     ax_heatmap.set_yticks(range(len(df.index)))
     ax_heatmap.set_yticklabels(custom_y_ticks)
     ax_heatmap.tick_params(axis='both', which='major', labelsize=labelsize)
@@ -1399,8 +2069,7 @@ combined_fig = plot_combined_figure_with_violins(
     colorbar_label_2='Ratio of Test Categories',
     tick_labels={0: "Odorless", 1: "Low", 2: "Medium", 3: "High"},
     text_annotation=False,
-    custom_x_ticks=['RDKit Descriptors', 'Morgan FP', 'RDKit FP', 'Topological Torsion FP', 'Atom Pair FP', 'MACCCS Keys FP', 'ChemBERTa'],
-    custom_y_ticks=['Logistic Regression', 'Random Forest', 'XGBoost', 'MLP', 'CORAL'],
+    abbreviation_dict=abbreviation_dict,
     figsize=(FIGURE_WIDTH_LONG*1.07, FIGURE_WIDTH_LONG * 0.78*1.07),
     dpi=DPI,
     fontsize=FONTSIZE,
@@ -1414,9 +2083,80 @@ combined_fig = plot_combined_figure_with_violins(
 )
 
 
+# In[ ]:
+
+
+# Violin plot combining Keller ratings across selected dilution levels in one 1x2 figure
+colors_4 = {
+    0.0: okabe_ito[2],
+    1.0: okabe_ito[3],
+    2.0: okabe_ito[1],
+    3.0: okabe_ito[7],
+}
+
+dilution_sets = [
+    [1.e-03, 1.e-05, 1.e-07],
+    [1.e-01],
+]
+panel_labels = ['a', 'b']
+
+fig, axes = plt.subplots(
+    1, 2,
+    figsize=(FIGURE_WIDTH_LONG, FIGURE_WIDTH_LONG * 0.38),
+    sharex=True,
+    sharey=True,
+    constrained_layout=True,
+ )
+
+for i, (ax, dilutions) in enumerate(zip(axes, dilution_sets)):
+    keller_dilutions = keller_2016_test.dropna(subset=[
+        'Odor dilution',
+        'HOW STRONG IS THE SMELL?',
+        'predicted_intensity_rounded',
+    ])
+    keller_dilutions = keller_dilutions[keller_dilutions['Odor dilution'].isin(dilutions)]
+
+    sns.violinplot(
+        data=keller_dilutions,
+        x='predicted_intensity_rounded',
+        y='HOW STRONG IS THE SMELL?',
+        ax=ax,
+        hue='predicted_intensity_rounded',
+        legend=False,
+        palette=colors_4,
+        cut=0,
+        density_norm='area',
+        common_norm=True,
+        order=[0.0, 1.0, 2.0, 3.0],
+    )
+
+    ax.set_xlim(-0.5, 3.5)
+    ax.set_ylabel('Rated Intensity', fontsize=FONTSIZE)
+    ax.tick_params(axis='both', which='major', labelsize=LABELSIZE)
+    ax.set_xticks([0, 1, 2, 3])
+    ax.set_xticklabels(['Odorless', 'Low', 'Medium', 'High'])
+    ax.set_xlabel('Predicted Odor Strength', fontsize=FONTSIZE)
+    if i % 2 == 0:
+        text_x = -0.16
+    else:
+        text_x = -0.03
+    ax.text(
+        text_x, 1.1, panel_labels[i],
+        transform=ax.transAxes,
+        ha='left',
+        va='top',
+        fontsize=FONTSIZE,
+        fontweight='bold',
+    )
+
+plt.savefig('figures/keller_violin_dilutions_combined.pdf', dpi=DPI)
+plt.savefig('figures/keller_violin_dilutions_combined.png', dpi=DPI)
+plt.show()
+
+
 # ## SHAP Feature Importance Analysis
 
-# In[42]:
+# In[ ]:
 
 
 import shap
@@ -1438,17 +2178,17 @@ mycmap = LinearSegmentedColormap.from_list("mycmap", colors, N=256)
 
 
 if best_hyperparameters_direct['predictor_name'] in ['ChemPropPredictor', 'ChemeleonPredictor']:
-    encoded_X_train = model.odor_strength_module.odor_strength_predictor.encode(X_train)
-    encoded_X_test = model.odor_strength_module.odor_strength_predictor.encode(X_test)
-    encoded_X = model.odor_strength_module.odor_strength_predictor.encode(X)
+    encoded_X_train = direct_model.models[0].odor_strength_module.odor_strength_predictor.encode(X_train)
+    encoded_X_test = direct_model.models[0].odor_strength_module.odor_strength_predictor.encode(X_test)
+    encoded_X = direct_model.models[0].odor_strength_module.odor_strength_predictor.encode(X)
 else:
-    encoded_X_train = model.odor_strength_module.molecule_encoder.encode(X_train)
-    encoded_X_test = model.odor_strength_module.molecule_encoder.encode(X_test)
-    encoded_X = model.odor_strength_module.molecule_encoder.encode(X)
+    encoded_X_train = direct_model.models[0].odor_strength_module.molecule_encoder.encode(X_train)
+    encoded_X_test = direct_model.models[0].odor_strength_module.molecule_encoder.encode(X_test)
+    encoded_X = direct_model.models[0].odor_strength_module.molecule_encoder.encode(X)
 feature_names = encoded_X_test.columns if hasattr(encoded_X_test, 'columns') else [f'Feature {i}' for i in range(encoded_X_test.shape[1])]
 
 
-# In[44]:
+# In[ ]:
 
 
 # Check the shape and type of encoded data
@@ -1485,11 +2225,20 @@ def predictor_wrapper(encoded_features: np.ndarray | pd.DataFrame) -> np.ndarray
     Returns:
         np.ndarray: Predicted odor strength values
     """
-    if best_hyperparameters_direct['predictor_name'] in ['ChemPropPredictor', 'ChemeleonPredictor']:
-        predictions = model.odor_strength_module.odor_strength_predictor.predict_from_fingerprint(encoded_features.values if hasattr(encoded_features, 'values') else encoded_features)
+    predictions_list = []
+    if hasattr(direct_model, 'models'):
+        for model in direct_model.models:
+            if model.predictor.__name__ in ['ChemPropPredictor', 'ChemeleonPredictor']:
+                predictions = model.odor_strength_module.odor_strength_predictor.predict_from_fingerprint(encoded_features.values if hasattr(encoded_features, 'values') else encoded_features)
+            else:
+                predictions = model.odor_strength_module.odor_strength_predictor.predict(encoded_features.values if hasattr(encoded_features, 'values') else encoded_features)
+            predictions_list.append(predictions)
+        predictions = np.mean(predictions_list, axis=0)
     else:
-        predictions = model.odor_strength_module.odor_strength_predictor.predict(encoded_features.values if hasattr(encoded_features, 'values') else encoded_features)
-    
+        if direct_model.predictor.__name__ in ['ChemPropPredictor', 'ChemeleonPredictor']:
+            predictions = direct_model.odor_strength_module.odor_strength_predictor.predict_from_fingerprint(encoded_features.values if hasattr(encoded_features, 'values') else encoded_features)
+        else:
+            predictions = direct_model.odor_strength_module.odor_strength_predictor.predict(encoded_features.values if hasattr(encoded_features, 'values') else encoded_features)
     return predictions
 
 # Test the wrapper
@@ -1521,11 +2270,14 @@ shap_values = explainer(encoded_X_test_np[:test_sample_size])
 # correlation matrix
 FIGURE_WIDTH_LONG = 17.1 / 2.54
 
+colors = [okabe_ito[1], okabe_ito[0], okabe_ito[3]]
+mycmap_black = LinearSegmentedColormap.from_list("mycmap", colors, N=256)
+
 encoded_X_df = pd.DataFrame(encoded_X, columns=feature_names)
 correlation_matrix = encoded_X_df.corr().fillna(0)
 
 fig = plt.figure(figsize=(FIGURE_WIDTH_LONG, FIGURE_WIDTH_LONG))
-plt.imshow(correlation_matrix, cmap=mycmap, vmin=-1, vmax=1)
+plt.imshow(correlation_matrix, cmap=mycmap_black, vmin=-1, vmax=1)
 plt.colorbar(label='Correlation Coefficient', shrink=0.73)
 plt.xticks(ticks=np.arange(len(feature_names)), labels=feature_names, rotation=90, fontsize=2)
 plt.yticks(ticks=np.arange(len(feature_names)), labels=feature_names, fontsize=2)
@@ -1543,7 +2295,7 @@ plt.show()
 
 # #### Agglomerative Clustering
 
-# In[48]:
+# In[ ]:
 
 
 # Improved feature grouping using agglomerative clustering
@@ -1553,7 +2305,63 @@ from scipy.spatial.distance import squareform
 import matplotlib.pyplot as plt
 
 
-# In[50]:
+# In[ ]:
+
+
+# Sweep correlation thresholds and compute silhouette scores
+from sklearn.metrics import silhouette_score
+
+thresholds = np.round(np.arange(0.65, 1, 0.01), 2)
+silhouette_scores = []
+
+correlation_matrix = pd.DataFrame(encoded_X_train_np).corr().fillna(0)
+distance_base = 1 - np.abs(correlation_matrix.values)
+np.fill_diagonal(distance_base, 0)
+
+for correlation_threshold in thresholds:
+    distance_threshold = 1 - correlation_threshold
+    clustering = AgglomerativeClustering(
+        n_clusters=None,
+        distance_threshold=distance_threshold,
+        linkage='average',
+        metric='precomputed',
+    )
+    cluster_labels = clustering.fit_predict(distance_base)
+    n_clusters = len(np.unique(cluster_labels))
+    if n_clusters < 2:
+        silhouette_scores.append(np.nan)
+        continue
+    try:
+        score = silhouette_score(distance_base, cluster_labels, metric='precomputed')
+    except:
+        print(correlation_threshold, n_clusters)
+    silhouette_scores.append(score)
+
+df_silhouette = pd.DataFrame({
+    'correlation_threshold': thresholds,
+    'silhouette_score': silhouette_scores,
+})
+df_silhouette
+
+plt.figure(figsize=(FIGURE_WIDTH, FIGURE_WIDTH * 0.6))
+plt.plot(df_silhouette['correlation_threshold'], df_silhouette['silhouette_score'], c=okabe_ito[1])
+plt.xlabel('Correlation Threshold', fontsize=FONTSIZE, labelpad=LABELPAD)
+plt.ylabel('Silhouette Score', fontsize=FONTSIZE, labelpad=LABELPAD)
+# plt.xticks(df_silhouette['correlation_threshold'], rotation=45)
+plt.tick_params(axis='both', which='major', labelsize=LABELSIZE)
+plt.tight_layout()
+plt.savefig('figures/rdkit_descriptors_agglomerative_thresholds.png', dpi=DPI)
+plt.savefig('figures/rdkit_descriptors_agglomerative_thresholds.pdf', dpi=DPI)
+plt.show()
+
+max_silhouette = df_silhouette['silhouette_score'].max()
+max_silhouette_idx = df_silhouette['silhouette_score'].idxmax()
+max_threshold = df_silhouette.loc[max_silhouette_idx, 'correlation_threshold']
+print(f'Max silhouette score {max_silhouette} at correlation threshold {max_threshold}')
+df_silhouette.sort_values('silhouette_score', ascending=False).head()
+
+
+# In[ ]:
 
 
 # Agglomerative clustering
@@ -1630,21 +2438,21 @@ print(f"\nCluster size statistics:")
 print(f"Agglomerative - Max: {max(agg_sizes) if agg_sizes else 0}, Mean: {np.mean(agg_sizes) if agg_sizes else 0:.1f}, Median: {np.median(agg_sizes) if agg_sizes else 0:.1f}")
 
 
-# In[59]:
+# In[ ]:
 
 
 groups_dict = { # representative: group
     'TPSA': 'Polarity',
-    'MolWt': 'Weight and Shape',
-    'NumAtomStereoCenters': 'Rings',
-    'PEOE_VSA10': 'Alcohol Groups',
-    'Kappa2': 'Branching'
+    'BertzCT': 'Weight and Shape',
+    'Ipc': 'Nitrogen-Polarity',
+    'VSA_EState3': 'Alcohol Groups',
+    'FpDensityMorgan3': 'Morgan FP Density'
     }
 
 
 # ### Global SHAP feature importance
 
-# In[63]:
+# In[ ]:
 
 
 import matplotlib.pyplot as plt
@@ -1662,7 +2470,7 @@ clustered_shap = shap.Explanation(values=clustered_shap_values,
                                  data=None,
                                  feature_names=selected_features_names)
 
-fig = plt.figure(figsize=(FIGURE_WIDTH, FIGURE_WIDTH*0.75))
+fig = plt.figure(figsize=(FIGURE_WIDTH*1.1, FIGURE_WIDTH*1.2))
 shap.plots.bar(clustered_shap,
                     show=False,
                     max_display=6,
@@ -1684,21 +2492,30 @@ if num_bars > 0:
 
 y_tick_locs = ax.get_yticks()
 y_tick_labels = [t.get_text() for t in ax.get_yticklabels()]
-if not any('feature' in name.lower() for name in y_tick_labels):
-    # For RDKit Descriptor names in study
-    new_y_tick_labels = [groups_dict.get(name, name) for name in y_tick_labels] + [f'{133 - len(y_tick_labels)} other Groups']
-    if len(new_y_tick_labels) == len(y_tick_labels) // 2:
-        ax.set_yticklabels(2*new_y_tick_labels)
+# if not any('feature' in name.lower() for name in y_tick_labels):
+# For RDKit Descriptor names in study
+new_y_tick_labels = [groups_dict.get(name, name) for name in y_tick_labels[:len(y_tick_labels) // 2] if not 'feature' in name.lower()] + [f'{131 - len(y_tick_labels)//2 + 1} other Groups']
+if len(new_y_tick_labels) == len(y_tick_labels) // 2:
+    ax.set_yticklabels(2*new_y_tick_labels)
 
 
 current_size = fig.get_size_inches()
 new_width = FIGURE_WIDTH
 scale_factor = new_width / current_size[0]
-new_height = current_size[1] * scale_factor
+new_height = current_size[1] * scale_factor * 1.25
+print(fig.get_size_inches()*2.54)
 fig.set_size_inches(new_width, new_height)
+print(fig.get_size_inches()*2.54)
 ax.set_xlabel('Sum absolute SHAP values', fontsize=FONTSIZE, labelpad=LABELPAD)
 ax.tick_params(axis='both', which='major', labelsize=LABELSIZE)
-print(fig.get_size_inches()*2.54)
+ax.margins(y=0.05)  # Add some vertical margins for better spacing
+
+# Add frame around the plot
+for spine in ax.spines.values():
+    spine.set_visible(True)
+    spine.set_linewidth(1)
+    spine.set_edgecolor('black')
+
 
 plt.tight_layout()
 plt.savefig('figures/shap_feature_importance.pdf', dpi=DPI)
@@ -1706,13 +2523,12 @@ plt.savefig('figures/shap_feature_importance.svg')
 plt.savefig('figures/shap_feature_importance.png', dpi=DPI)
 plt.show()
 
-print(fig.get_size_inches()*2.54)
 
 
 df_clustered_shap_values = pd.DataFrame(clustered_shap_values, columns=selected_features_names)
 
 
-# In[64]:
+# In[ ]:
 
 
 # Import matplotlib
@@ -1755,7 +2571,7 @@ def plot_summary_plot_feature_group(most_important_feature: str) -> None:
 
     fig =plt.figure(figsize=(FIGURE_WIDTH, FIGURE_WIDTH*0.75))
     shap.plots.beeswarm(cluster_shap_explanation,
-                        max_display=20,
+                        max_display=25,
                         show=False)
     cmap = mpl.cm.get_cmap(mycmap)
 
@@ -1808,6 +2624,10 @@ def plot_summary_plot_feature_group(most_important_feature: str) -> None:
 
     ax.set_xlabel('SHAP Value (Impact on Model Output)', fontsize=FONTSIZE, labelpad=LABELPAD)
     ax.tick_params(axis='both', which='major', labelsize=LABELSIZE)
+    max_height = 21 / 2.54
+    current_width, current_height = fig.get_size_inches()
+    if current_height > max_height:
+        fig.set_size_inches(current_width, max_height, forward=True)
     plt.tight_layout()
     plt.savefig(f'figures/shap_summary_plot_{most_important_cluster["representative"]}_cluster.pdf', dpi=DPI)
     plt.show()
@@ -1822,14 +2642,14 @@ for representative_feature in y_tick_labels[:5]:
     important_features.extend(cluster_features)
 
 
-# In[65]:
+# In[ ]:
 
 
 df_clusterd_shap_values_renamed = df_clustered_shap_values.rename(columns=lambda x: groups_dict.get(x, x))
 
 category_colors = [okabe_ito[2], okabe_ito[3], okabe_ito[1], okabe_ito[7]]
 
-preds_rounded = np.round(model.predict(X_test)).astype(int)
+preds_rounded = np.round(direct_model.predict(X_test)).astype(int)
 
 
 # In[ ]:
@@ -1844,12 +2664,13 @@ for i, category in enumerate([0, 1, 2, 3]):
     category_mask = preds_rounded == category
     category_shap_data = df_clusterd_shap_values_renamed[category_mask]
     # Check if all values from groups_dict are present in the columns
-    if all(col in category_shap_data.columns for col in groups_dict.values()):
+    if all(col in category_shap_data.columns for col in list(groups_dict.values())):
         mean_shap_values = category_shap_data[list(groups_dict.values())].mean(axis=0)
+        print('mean_shap_values:', mean_shap_values)
     else:
         mean_shap_values = category_shap_data.iloc[:,:5].mean(axis=0)
     bars = axes[i].barh(range(len(mean_shap_values)), mean_shap_values.values, color=category_colors[i], alpha=0.7)
-    axes[i].set_xlim(0, 0.6)
+    axes[i].set_xlim(0, 0.5)
     if i % 2 == 0:
         axes[i].set_yticks(range(len(mean_shap_values)))
         axes[i].set_yticklabels(mean_shap_values.index, fontsize=LABELSIZE)
@@ -1896,10 +2717,10 @@ def local_explain(smiles: str, background: pd.DataFrame | np.ndarray, save_path:
     """
     max_display = 6
     if best_hyperparameters_direct['predictor_name'] in ['ChemPropPredictor', 'ChemeleonPredictor']:
-        encoded_mol = model.odor_strength_module.odor_strength_predictor.encode(2*[smiles])[0:1]
+        encoded_mol = direct_model.models[0].odor_strength_module.odor_strength_predictor.encode(2*[smiles])[0:1]
         print(encoded_mol.shape)
     else:
-        encoded_mol = model.odor_strength_module.molecule_encoder.encode([smiles])
+        encoded_mol = direct_model.models[0].odor_strength_module.molecule_encoder.encode([smiles])
     encoded_mol_np = encoded_mol.values if hasattr(encoded_mol, 'values') else encoded_mol
     background_values = background.values if hasattr(background, 'values') else background
 
@@ -1910,14 +2731,7 @@ def local_explain(smiles: str, background: pd.DataFrame | np.ndarray, save_path:
         clustered_shap_values[:, cluster_id] = np.sum(shap_values_local.values[:, feature_indices], axis=1)
     selected_clusters = pd.DataFrame(clustered_shap_values, columns=selected_features_names)
     selected_clusters = selected_clusters[representative_features]
-    mapping = {
-        'TPSA': 'Polarity',
-        'MolWt': 'Weight and Shape',
-        'NumAtomStereoCenters': 'Rings',
-        'PEOE_VSA10': 'Alcohol Groups',
-        'Kappa2': 'Branching',
-    }
-    selected_clusters.columns = [mapping.get(col, col) for col in selected_clusters.columns]
+    selected_clusters.columns = [groups_dict.get(col, col) for col in selected_clusters.columns]
     other_clusters =  clustered_shap_values.sum() - selected_clusters.values.sum()
     clustered_shap_values = selected_clusters.values
     
