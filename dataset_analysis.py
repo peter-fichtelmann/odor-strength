@@ -80,8 +80,8 @@ df_counts.sort_index(inplace=True, ascending=True)
 df_counts.sort_index(inplace=True, ascending=True, axis=1)
 # df_counts = df_counts / df_counts.sum().sum() * 100 # to percent
 print(df_counts)
-colors = [okabe_ito[1], okabe_ito[3]]
-mycmap = LinearSegmentedColormap.from_list("mycmap", colors, N=256)
+colors_2 = [okabe_ito[1], okabe_ito[3]]
+mycmap = LinearSegmentedColormap.from_list("mycmap", colors_2, N=256)
 plt.figure(figsize=(FIGURE_WIDTH, 2.5))
 plt.imshow(df_counts.values, cmap=mycmap, origin='lower')
 for y_idx, y_value in enumerate(df_counts.index):
