@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 from utility.colors import okabe_ito
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
@@ -14,11 +15,11 @@ import umap
 from models.molecule_encoder import MorganFp, RDKitDescriptors
 
 
-# In[2]:
+# In[ ]:
 
 
 DPI = 600
-FONTSIZE = 8
+FONTSIZE = 9
 LABELSIZE = 7
 LABELPAD = 4
 FIGURE_WIDTH = 8.3 / 2.54
@@ -31,17 +32,189 @@ colors = [okabe_ito[2], okabe_ito[3], okabe_ito[1], okabe_ito[7]]
 
 # Run the notebook dataset_curation.ipynb or python script dataset_curation.py first
 
-# In[3]:
+# In[ ]:
 
 
 df = pd.read_csv('data/df_odor_strength.csv')
+
+
+# ## Comparison to the GC results of Mayhew et al. (2022)
+# This aims to give an approximation of the influence of impurities on our dataset
+
+# In[ ]:
+
+
+mayhew_s2 = pd.read_csv('data/mayhew_2022/pnas.2116576119.sd02.csv')
+
+
+# In[ ]:
+
+
+from data.molecules.smiles_converter import SmilesCanonicalizer
+mayhew_s2['canonical_smiles'] = SmilesCanonicalizer().canonicalize_smiles(mayhew_s2['SMILES'].tolist())
+print('duplicated_canonical_smiles:', mayhew_s2[mayhew_s2['canonical_smiles'].duplicated(keep=False)])
+# correct entry for (-)-caryophyllene oxide
+mayhew_s2.loc[mayhew_s2['compound.name'] == '(-)-caryophyllene oxide', 'SMILES'] = 'C[C@@]12CC[C@@H]3[C@H](CC3(C)C)C(=C)CC[C@H]1O2'
+mayhew_s2['canonical_smiles'] = SmilesCanonicalizer().canonicalize_smiles(mayhew_s2['SMILES'].tolist())
+intersecting_smiles = [smiles for smiles in mayhew_s2['canonical_smiles'] if smiles in df['canonical_smiles'].tolist()]
+print(f"Number of intersecting molecules: {len(intersecting_smiles)}")
+mayhew_s2_intersect = mayhew_s2.copy().set_index('canonical_smiles').loc[intersecting_smiles]
+df_intersect = df.copy().set_index('canonical_smiles').loc[intersecting_smiles]
+df_combined = pd.concat([mayhew_s2_intersect, df_intersect], axis=1)
+df_combined['mayhew_has_odor'] = df_combined['final.odor.class'].str.strip().str.lower().map({'odor': 1, 'odorless': 0})
+df_combined
+
+
+# In[ ]:
+
+
+value_counts_class_combinations = {}
+for odor_strength in df_combined['numerical_strength'].unique():
+    value_counts_class_combinations[odor_strength] = {}
+    for mayhew_odor_class in df_combined['mayhew_has_odor'].unique():
+        subset = df_combined[(df_combined['numerical_strength'] == odor_strength) & (df_combined['mayhew_has_odor'] == mayhew_odor_class)]
+        count = len(subset)
+        value_counts_class_combinations[odor_strength][mayhew_odor_class] = count
+df_counts = pd.DataFrame(value_counts_class_combinations).fillna(0).astype(int).T
+df_counts.sort_index(inplace=True, ascending=True)
+df_counts.sort_index(inplace=True, ascending=True, axis=1)
+# df_counts = df_counts / df_counts.sum().sum() * 100 # to percent
+print(df_counts)
+colors = [okabe_ito[1], okabe_ito[3]]
+mycmap = LinearSegmentedColormap.from_list("mycmap", colors, N=256)
+plt.figure(figsize=(FIGURE_WIDTH, 2.5))
+plt.imshow(df_counts.values, cmap=mycmap, origin='lower')
+for y_idx, y_value in enumerate(df_counts.index):
+    for x_idx, x_value in enumerate(df_counts.columns):
+        count = df_counts.loc[y_value, x_value]
+        text_color = 'white' if count > df_counts.values.max() * 0.5 else 'black'
+        plt.text(x_idx, y_idx, str(count), ha='center', va='center', color=text_color, fontsize=LABELSIZE)
+plt.xlabel('Mayhew GC Odor Class', fontsize=FONTSIZE, labelpad=LABELPAD)
+plt.ylabel('Odor Strength', fontsize=FONTSIZE, labelpad=LABELPAD)
+plt.xticks(ticks=[0, 1], labels=['Odorless', 'Odor'], fontsize=LABELSIZE)
+plt.yticks(ticks=df_counts.index, labels=['None', 'Low', 'Medium', 'High'], fontsize=LABELSIZE)
+colorbar = plt.colorbar()
+colorbar.set_label('Count', fontsize=FONTSIZE, labelpad=LABELPAD+LABELPAD*0.2)
+colorbar.ax.tick_params(labelsize=LABELSIZE)
+# plt.colorbar(label='Count', fraction=0.046, pad=0.04)
+plt.tight_layout()
+plt.savefig('figures/mayhew_impurities.pdf', dpi=DPI)
+plt.savefig('figures/mayhew_impurities.png', dpi=DPI)
+
+
+
+# In[ ]:
+
+
+# percentage of as odorous labelled compounds which are odorless after Mayhew et al. (2022)
+print(f'Number of intersecting compounds labelled as odorous in our dataset: {df_counts.loc[[1, 2, 3]].sum().sum()}')
+print(f'Number of intersecting compounds labelled as odorous in our dataset, but odorless by GC in Mayhew et al. (2022): {df_counts.loc[[1, 2, 3], 0].sum()}')
+impurity_missclassifications = df_counts.loc[[1, 2, 3], 0].sum() / df_counts.loc[[1, 2, 3]].sum().sum() * 100
+print(f'Impurity missclassifications {impurity_missclassifications} %')
+
+
+# In[ ]:
+
+
+df_combined[(df_combined['numerical_strength'] > 0) & (df_combined['mayhew_has_odor'] == 0)]
 
 
 # ## Dimensionality Reduction
 
 # ### Odor strength data
 
-# In[4]:
+# In[ ]:
+
+
+# PCA for RDKit Descriptors
+rdkit_descriptors = RDKitDescriptors().encode(df['canonical_smiles'].tolist())
+rdkit_descriptors = pd.DataFrame(StandardScaler().fit_transform(rdkit_descriptors), columns=rdkit_descriptors.columns)
+pca_rdkit_desc = PCA(n_components=2, random_state=42)
+rdkit_pca = pca_rdkit_desc.fit_transform(rdkit_descriptors)
+
+
+# In[ ]:
+
+
+rdkit_descriptors = RDKitDescriptors().encode(df['canonical_smiles'].tolist())
+
+
+# In[ ]:
+
+
+df_pca_rdkit = pd.DataFrame(
+    {
+        'PCA1': rdkit_pca[:, 0],
+        'PCA2': rdkit_pca[:, 1],
+        'numerical_strength': df['numerical_strength'].tolist(),
+    },
+    index=df['canonical_smiles'],
+)
+
+strength_categories = [0, 1, 2, 3]
+category_labels = ['Odorless', 'Low', 'Medium', 'High']
+
+fig, ax = plt.subplots(figsize=(FIGURE_WIDTH, 2.5))
+
+for idx, strength in enumerate(strength_categories):
+    mask = df_pca_rdkit['numerical_strength'] == strength
+    ax.scatter(
+        df_pca_rdkit.loc[mask, 'PCA1'],
+        df_pca_rdkit.loc[mask, 'PCA2'],
+        c=colors[idx],
+        label=category_labels[idx],
+        alpha=0.5,
+        s=0.5,
+    )
+
+ax.set_xlabel('Component 1', fontsize=LABELSIZE, labelpad=LABELPAD)
+ax.set_ylabel('Component 2', fontsize=LABELSIZE, labelpad=LABELPAD)
+ax.tick_params(labelsize=LABELSIZE - 1, labelbottom=False, labelleft=False)
+ax.set_xticks([])
+ax.set_yticks([])
+ax.tick_params(axis='both', which='both', length=0)
+ax.legend(fontsize=LABELSIZE - 1, loc='upper right', markerscale=3)
+
+plt.tight_layout()
+# Save rasterized version
+ax.set_rasterized(True)
+plt.savefig('figures/pca_rdkit_descriptors_w_glucagon_rasterized.pdf', dpi=DPI)
+plt.show()
+
+
+# In[ ]:
+
+
+from rdkit import Chem
+from rdkit.Chem import Draw
+from IPython.display import display
+
+def max_pca1_molecule(df_pca_rdkit):
+    smiles = df_pca_rdkit['PCA1'].idxmax()
+    max_value_pca1 = df_pca_rdkit['PCA1'].max()
+    print(smiles, max_value_pca1)
+    mol = Chem.MolFromSmiles(smiles)
+    img = Draw.MolToImage(mol, size=(800, 400))
+    display(img)
+    return smiles
+
+smiles = max_pca1_molecule(df_pca_rdkit)
+
+
+# In[ ]:
+
+
+df[df['canonical_smiles'] == smiles]
+
+
+# In[ ]:
+
+
+# Glucagon was removed for the PCA anaylysis to see the distribution of the other molecules better
+df_wo_glucagon = df[df['canonical_smiles'] != smiles]
+
+
+# In[ ]:
 
 
 morgan_fingerprint = MorganFp(count=False, radius=3, fpSize=2048)
@@ -52,7 +225,7 @@ rdkit_descriptors = RDKitDescriptors().encode(df['canonical_smiles'].tolist())
 rdkit_descriptors = pd.DataFrame(StandardScaler().fit_transform(rdkit_descriptors), columns=rdkit_descriptors.columns)
 
 
-# In[5]:
+# In[ ]:
 
 
 # PCA for Morgan Fingerprints (Binary)
@@ -80,7 +253,7 @@ umap_rdkit = umap.UMAP(n_components=2, random_state=42)
 rdkit_umap = umap_rdkit.fit_transform(rdkit_descriptors)
 
 
-# In[9]:
+# In[ ]:
 
 
 # Create visualization of PCA and UMAP results colored by numerical_strength
@@ -95,12 +268,12 @@ subplot_labels = ['a', 'b', 'c', 'd', 'e', 'f']
 
 # Plotting data with PCA objects for explained variance
 plot_data = [
+    (rdkit_pca, 'RDKit Descriptors - PCA', pca_rdkit_desc),
     (morgan_pca, 'Morgan FP (Binary) - PCA', pca_morgan),
     (morgan_count_pca, 'Morgan FP (Count) - PCA', pca_morgan_count),
-    (rdkit_pca, 'RDKit Descriptors - PCA', pca_rdkit_desc),
+    (rdkit_umap, 'RDKit Descriptors - UMAP', None),
     (morgan_umap, 'Morgan FP (Binary) - UMAP', None),
     (morgan_count_umap, 'Morgan FP (Count) - UMAP', None),
-    (rdkit_umap, 'RDKit Descriptors - UMAP', None)
 ]
 
 for idx, (data, title, pca_obj) in enumerate(plot_data):
@@ -155,7 +328,7 @@ for ax in axes.flat:
 plt.show()
 
 
-# In[10]:
+# In[ ]:
 
 
 # Create separate plots for each numerical strength category using RDKit Descriptors PCA
@@ -224,10 +397,11 @@ plt.show()
 
 # ### With odorous molecules background
 
-# In[6]:
+# In[ ]:
 
 
 from data.molecules.smiles_converter import SmilesCanonicalizer
+import numpy as np
 
 s3_mayhew = pd.read_csv('data/mayhew_2022/pnas.2116576119.sd03.csv')
 
@@ -320,7 +494,7 @@ def umap_analysis(s3, only_s3_fit=False, fingerprint_function=get_all_morgan_fin
 #         plt.savefig(save_path, dpi=DPI, bbox_inches='tight')
 
 
-# In[7]:
+# In[ ]:
 
 
 # Create 3x2 plot showing PCA and UMAP results for different descriptor types
@@ -334,7 +508,7 @@ print("Processing RDKit Descriptors...")
 pca_rdkit, x_pca_all_rdkit, x_pca_gs_rdkit, x_pca_pubchem_rdkit, x_pca_0_rdkit, x_pca_1_rdkit, x_pca_2_rdkit, x_pca_3_rdkit, explained_var_rdkit = pca_analysis(s3_mayhew, fingerprint_function=get_all_rdkit_descriptors)
 
 
-# In[11]:
+# In[ ]:
 
 
 x_umap_all_rdkit, x_umap_gs_rdkit, x_umap_pubchem_rdkit, x_umap_0_rdkit, x_umap_1_rdkit, x_umap_2_rdkit, x_umap_3_rdkit = umap_analysis(s3_mayhew, fingerprint_function=get_all_rdkit_descriptors)
@@ -352,7 +526,7 @@ x_umap_all_morgan_count, x_umap_gs_morgan_count, x_umap_pubchem_morgan_count, x_
 print("All computations completed!")
 
 
-# In[12]:
+# In[ ]:
 
 
 # Create 3x2 subplot using the plot_strength function
@@ -427,7 +601,7 @@ for ax in axes.flat:
 plt.show()
 
 
-# In[13]:
+# In[ ]:
 
 
 # Create 3x2 subplot using the plot_strength function
@@ -500,7 +674,7 @@ for ax in axes.flat:
 plt.show()
 
 
-# In[14]:
+# In[ ]:
 
 
 # Create separate plots for each numerical strength category using RDKit Descriptors PCA
@@ -582,7 +756,7 @@ for ax in axes.flat:
 plt.show()
 
 
-# In[14]:
+# In[ ]:
 
 
 # Analyze which RDKit descriptors have highest impact on PC1 and PC2
@@ -615,7 +789,7 @@ pc1_top_features, pc2_top_features = pca_component_analysis(pca_rdkit_desc, feat
 print(pd.concat([pc1_top_features, pc2_top_features], axis=1).to_latex(index=False))
 
 
-# In[15]:
+# In[ ]:
 
 
 pc1_top_features, pc2_top_features = pca_component_analysis(pca_rdkit, feature_names)
@@ -624,7 +798,7 @@ print(pd.concat([pc1_top_features, pc2_top_features], axis=1).to_latex(index=Fal
 
 # PC1 as molecular size and shape measure and PC2 as polarity measure
 
-# In[8]:
+# In[ ]:
 
 
 # Create a 1x2 plot combining the separated plots and dataset figure
@@ -949,21 +1123,21 @@ print("- Noise points only apply to DBSCAN algorithm")
 print("- Best parameters show the hyperparameter combination that achieved the highest ARI score")
 
 
-# In[17]:
+# In[ ]:
 
 
 results_df
 
 
-# In[20]:
+# In[ ]:
 
 
-print(results_df.to_latex(index=False, columns=['Descriptor', 'Algorithm', 'ARI', 'Silhouette'], float_format="%.3f"))
+print(results_df.to_latex(index=False, columns=['Descriptor', 'Algorithm', 'ARI', 'NMI', 'AMI', 'Silhouette'], float_format="%.3f"))
 
 
 # ### Dataset figure
 
-# In[18]:
+# In[ ]:
 
 
 # Create a 1x2 plot combining the separated plots and dataset figure
@@ -1060,10 +1234,4 @@ gmm_ari = adjusted_rand_score(df['numerical_strength'].values, gmm_cluster_label
 print(f"\nGMM Clustering Performance:")
 print(f"Adjusted Rand Index (ARI): {gmm_ari:.3f}")
 print(f"Best hyperparameters: covariance_type='spherical', max_iter=100, tol=0.001")
-
-
-# In[ ]:
-
-
-
 
