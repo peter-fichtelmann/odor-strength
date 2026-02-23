@@ -1,9 +1,8 @@
-
-
-
 import pandas as pd
 import re
 import numpy as np
+from sklearn.metrics import cohen_kappa_score
+import krippendorff
 
 class OdorStrengthDataCleaner:
     def __init__(self):
@@ -56,6 +55,22 @@ class OdorStrengthDataCleaner:
         self.pubchem_strength.index = self.pubchem_strength['canonical_smiles']
         df_compare['pubchem_odor_strength'] = self.pubchem_strength.loc[df_compare.index, 'odor_strength']
         df_compare['pubchem_description'] = self.pubchem_strength.loc[df_compare.index, 'raw_description']
+        
+        category_dict = {'none': 0, 'low': 1, 'medium': 2, 'high': 3, 'very high': 3}
+        df_compare['numerical_odor_strength'] = np.array([category_dict[odor_strength] for odor_strength in df_compare['odor_strength'].tolist()])
+        df_compare['numerical_pubchem_odor_strength'] = np.array([category_dict[odor_strength] for odor_strength in df_compare['pubchem_odor_strength'].tolist()])
+        cohen_kappa_quadratic_weighted_score_value = cohen_kappa_score(df_compare['numerical_odor_strength'].values, df_compare['numerical_pubchem_odor_strength'].values, weights='quadratic')
+        print('Cohen Kappa Quadratic Weighted Score:', cohen_kappa_quadratic_weighted_score_value)
+        
+        goodscents = self.goodsents_strength.copy()
+        goodscents.set_index('canonical_smiles', inplace=True)
+        pubchem = self.pubchem_strength.copy()
+        goodscents['numerical_odor_strength'] = np.array([category_dict[odor_strength] for odor_strength in goodscents['odor_strength'].tolist()])
+        pubchem['numerical_odor_strength'] = np.array([category_dict[odor_strength] for odor_strength in pubchem['odor_strength'].tolist()])
+        df_combined = pd.concat([goodscents['numerical_odor_strength'], pubchem['numerical_odor_strength']], axis=1, keys=['GoodScents', 'PubChem'])
+        data = df_combined.values.T
+        alpha = krippendorff.alpha(reliability_data=data, level_of_measurement='ordinal')
+        print("Krippendorff's alpha:", alpha)
         return df_compare
 
     def merge_odor_strength_datasets(self):

@@ -17,7 +17,7 @@ def get_odor_strength_data_cleaner(df_pubchem, unified_labels):
     odor_strength_data_cleaner.compare_odor_strength_datasets()
     return odor_strength_data_cleaner
 
-def load_odor_strength(df_goodscents, df_pubchem, target_dataset):
+def load_odor_strength(df_goodscents, df_pubchem, target_dataset: str = 'GoodScents'):
     odor_strength_data_cleaner = get_odor_strength_data_cleaner(df_pubchem, df_goodscents)
     odor_strength_data_cleaner.merge_odor_strength_datasets()
     df_odor_strength = odor_strength_data_cleaner.odor_strength
