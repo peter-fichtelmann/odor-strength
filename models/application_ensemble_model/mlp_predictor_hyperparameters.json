@@ -1,0 +1,30 @@
+{
+    "standardizer_name": "standard",
+    "n_layers": 4,
+    "dim": 160,
+    "batch_size": 32,
+    "n_epochs": 56,
+    "objective_name": "mse",
+    "learning_rate": 0.00013973418866089282,
+    "optimizer_name": "rmsprop",
+    "training_scheduler_name": "ReduceLROnPlateau",
+    "warmup_epochs": 10,
+    "activation": "leaky-relu",
+    "dropout": 0.30000000000000004,
+    "early_stopping_params": {
+        "early_stopping_rounds": 50,
+        "delta": 0
+    },
+    "weight_average": false,
+    "metric_name": "mse_macro",
+    "verbose_eval": false,
+    "optimizer_params": {
+        "weight_decay": 1.706018374154444e-05,
+        "momentum": 0.1,
+        "alpha": 0.93
+    },
+    "binarize_labels": true,
+    "dealing_with_incosistency": "sum",
+    "input_dim": 217,
+    "output_dim": 3
+}

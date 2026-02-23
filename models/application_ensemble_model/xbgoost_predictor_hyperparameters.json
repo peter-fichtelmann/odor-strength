@@ -1,0 +1,22 @@
+{
+    "custom_metric": "mse_macro",
+    "objective": "binary:logistic",
+    "booster": "gbtree",
+    "num_boost_round": 33,
+    "early_stopping_rounds": 50,
+    "eta": 0.2281695287211502,
+    "lambda": 0.002910322475480578,
+    "alpha": 0.009186134614614804,
+    "verbose_eval": false,
+    "gamma": 0.046975681734100556,
+    "max_depth": 10,
+    "min_child_weight": 0.3203752831472683,
+    "max_delta_step": 1.0,
+    "subsample": 0.6,
+    "colsample_bytree": 0.8,
+    "colsample_bylevel": 0.8,
+    "num_parallel_tree": 3,
+    "binarize_labels": true,
+    "dealing_with_incosistency": "max",
+    "multi_strategy": "multi_output_tree"
+}

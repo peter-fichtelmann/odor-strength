@@ -105,11 +105,11 @@ This script:
 ### 6. Model Application (Independent)
 
 ```bash
-jupyter notebook best-performing_model_application.ipynb
+jupyter notebook direct_ensemble_model_application.ipynb
 ```
 
 This notebook:
-- Loads best-performing model from the study
+- Loads direct ensemble model from the study
 - Demonstrates how to use models for prediction on new SMILES strings
 - **Independent**: Can be run without running other scripts (uses pre-trained models)
 

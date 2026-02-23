@@ -1,0 +1,6 @@
+Encoder_1: RDKitDescriptors
+Predictor_1: RandomForestPredictor
+Encoder_2: RDKitDescriptors
+Predictor_2: XGBoostPredictor
+Encoder_3: RDKitDescriptors
+Predictor_3: MLP_Predictor
