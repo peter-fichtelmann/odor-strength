@@ -1,15 +1,48 @@
+.gitignore
 chemeleon_mp.pt
 *.pdf
 /plots/
 /checkpoints/
 /logs/
 /test_predictions/
+/test_predictions_unrevised/
 **/__pycache__/
 *.log
 *.db
 /data/goodscents/goodscents.csv
 /data/df_odor_strength.csv
 /data/odor_strength_groups.csv
-/data/dataset_curation revision.ipynb
 /data/scs_synthability_score/
 dataset_curation revision.ipynb
+chemberta_encoding_db.ipynb
+/chemberta_encodings/
+hyperparameter_optimization/changing_file_names_terminal.txt
+/paired_ttests/
+metrics_direct.csv
+model_training_validation_insights revision.ipynb
+dataset_analysis revision.ipynb
+figures/combined_performance_plots.png
+figures/combined_performance_plots.svg
+figures/feature_correlation_matrix.png
+figures/feature_correlation_matrix.svg
+figures/hp_opt_heatmap_difference.png
+figures/keller_violin_dilutions_0.png
+figures/keller_violin_dilutions_1.png
+figures/keller_violin_dilutions_combined.png
+figures/keller_violin_dilutions.png
+figures/mayhew_impurities.png
+figures/pca_rdkit_desc_per_odor_strength_w_background_rasterized.png
+figures/pca_rdkit_desc_per_odor_strength_w_background.png
+figures/rdkit_descriptors_agglomerative_thresholds.png
+figures/shap_feature_importance_by_category.png
+figures/shap_feature_importance_by_category.svg
+figures/shap_feature_importance.png
+figures/shap_feature_importance.svg
+figures/shap_local_explanation_ethylene_glycol_group.png
+figures/shap_local_explanation_ethylene_glycol_group.svg
+figures/shap_local_explanation_ez_farnesol_group.png
+figures/shap_local_explanation_ez_farnesol_group.svg
+figures/shap_local_explanation_galaxolide_group.png
+figures/shap_local_explanation_galaxolide_group.svg
+figures/shap_local_explanation_indole_group.png
+figures/shap_local_explanation_indole_group.svg
